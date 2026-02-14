@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -18,8 +20,9 @@ namespace EasyConnect
         private string ipServer;
         private string portServer;
         private string bundleID;
-        private List<string> ipHeadsetList = new List<string>();
+        private List<Devices> devicesList = new List<Devices>();
         private string currentIP;
+        private HttpListener httpListener;
         public WINDOW()
         {
             InitializeComponent();
@@ -27,10 +30,6 @@ namespace EasyConnect
             CurrentDevices();
         }
         private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-        private void groupBox1_Enter(object sender, EventArgs e)
         {
 
         }
@@ -44,11 +43,10 @@ namespace EasyConnect
         }
         private async void buttonCONNECT_Click(object sender, EventArgs e)
         {
-            await RunCommand("adb", $"tcpip 5555");
-            await RunCommand("adb", $"connect {ipHeadset}");
+            await RunCommand("adb", $"tcpip 5555 || connect {ipHeadset}");
             CurrentDevices();
         }
-        private async Task<string> RunCommand(string fileName, string arguments, IProgress<int> progress = null)
+        private async Task<(int ExitCode, string Output)> RunCommand(string fileName, string arguments, IProgress<int> progress = null)
         {
             var psi = new ProcessStartInfo
             {
@@ -63,29 +61,15 @@ namespace EasyConnect
 
             using (var process = Process.Start(psi))
             {
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
 
+                await Task.WhenAll(outputTask, errorTask);
                 await process.WaitForExitAsync();
-                return output + error;
-                //string output = "";
-                //var buffer = new char[1];
-                //var sb = new StringBuilder();
 
-                //while(!process.StandardOutput.EndOfStream)
-                //{
-                //    await process.StandardOutput.ReadAsync(buffer, 0, buffer.Length);
-                //    sb.Append(buffer[0]);
+                string combined = outputTask.Result + errorTask.Result;
 
-                //    if (buffer[0] == '\r' || buffer[0] == '\n')
-                //    {
-                //        output += sb.ToString();
-                //        ParseProgress(output, progress);
-                //        sb.Clear();
-                //    }
-                //}
-                //await process.WaitForExitAsync();
-                //return output;
+                return (process.ExitCode, combined);
             }
         }
         private void ParseProgress(string text, IProgress<int> progress)
@@ -113,23 +97,27 @@ namespace EasyConnect
 
             using (HttpClient client = new HttpClient())
             {
-                string html = await client.GetStringAsync(url);
-                
-                // Extrae href="archivo"
-                Regex regex = new Regex("href=\"([^\"]+)\"");
-                MatchCollection matches = regex.Matches(html);
-
-                foreach (Match match in matches)
+                try
                 {
-                    string name = match.Groups[1].Value;
-                    // Ignorar navegación
-                    if (name == "../" || name.EndsWith("/"))
-                        continue;
-                    Debug.WriteLine(name);
-                    if (!name.EndsWith(".zip") && !name.EndsWith(".mp4") && !name.EndsWith(".apk"))
-                        continue;
-                    files.Add(name);
-                    Debug.WriteLine(name);
+                    string html = await client.GetStringAsync(url);
+
+                    // Extrae href="archivo"
+                    Regex regex = new Regex("href=\"([^\"]+)\"");
+                    MatchCollection matches = regex.Matches(html);
+
+                    foreach (Match match in matches)
+                    {
+                        string name = match.Groups[1].Value;
+                        // Ignorar navegación
+                        if (name == "../" || name.EndsWith("/") || name.EndsWith("com") || name.EndsWith("asc") ||name.EndsWith("desc"))
+                            continue;
+                        Debug.WriteLine(name);
+                        files.Add(name);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
                 }
             }
             return files;
@@ -144,60 +132,54 @@ namespace EasyConnect
         }
         private async void buttonSERVERCONNECTION_Click(object sender, EventArgs e)
         {
-            listBoxFILENAMES.Items.Clear();
-
-            var fileNames = await GetFileNameFromServer();
-
-            foreach (var file in fileNames)
+            try
             {
-                listBoxFILENAMES.Items.Add(file.Remove(0, 2));
-            }
-        }
-        private void labelFILENAME_Click(object sender, EventArgs e)
-        {
+                listBoxFILENAMES.Items.Clear();
 
+                var fileNames = await GetFileNameFromServer();
+                labelBUNDLE.Text = File.ReadAllText("D:\\SANTIAGO\\INTUITIVA\\TOOLS\\DEPLOY\\bundleID.txt");
+                bundleID = labelBUNDLE.Text;
+                foreach (var file in fileNames)
+                {
+                    listBoxFILENAMES.Items.Add(file.Remove(0, 2));
+                }
+
+                StartServerConnection();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
         }
         private void listBoxFILENAMES_SelectedIndexChanged(object sender, EventArgs e)
         {
         }
         private async void buttonDOWNLOAD_Click(object sender, EventArgs e)
         {
-            var tasks = new List<Task>();
-
-            foreach (var ip in ipHeadsetList)
-            {
-                tasks.Add(RunCommand("adb",
-                    $"-s {ip} shell am start-foreground-service " +
-                    $"-n com.easyconnect.agent/.DownloadService " +
-                    $"--es url http://{ipServer}:{portServer} " +
-                    $"--es bundle {bundleID}"
-                ));
-            }
-            await Task.WhenAll(tasks);
+            buttonAction($"shell am start-foreground-service " +
+                $"-n com.easyconnect.agent/.DownloadService " +
+                $"--es url http://{ipServer}:{portServer} " +
+                $"--es bundle {bundleID}");
         }
         private async void CurrentDevices()
         {
-            ipHeadsetList.Clear();
+            devicesList.Clear();
+
             listBoxDEVICES.Items.Clear();
-            string ips = "";
-            ips = await RunCommand("adb", "devices", null);
+            var (ExitCode, ips) = await RunCommand("adb", "devices", null);
+            if (ExitCode != 0)
+                return;
+
             var matches = Regex.Matches(ips, @"(\d+\.\d+\.\d+\.\d+):\d+");
             foreach (Match match in matches)
             {
                 string ip = match.Groups[1].Value;
+                Devices device = new Devices(ip, "FAIL", "FAIL", false);
+                devicesList.Add(device);
                 Debug.WriteLine("IP encontrada: " + ip);
 
-                ipHeadsetList.Add(ip);
-                listBoxDEVICES.Items.Add(ip);
+                listBoxDEVICES.Items.Add($"{device.ipAddress}    {device.downloadStatus}     {device.installStatus}");
             }
-        }
-        private void labelCURRENTIP_Click(object sender, EventArgs e)
-        {
-
-        }
-        private void labelIPDEVICE_Click(object sender, EventArgs e)
-        {
-            
         }
         private void listBoxDEVICES_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -205,34 +187,109 @@ namespace EasyConnect
         }
         private async void buttonMOVE_Click(object sender, EventArgs e)
         {
-            var tasks = new List<Task>();
-            foreach (var ip in ipHeadsetList)
-            {
-                tasks.Add(RunCommand("adb", $"-s {ip} shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " +
-                        $"/sdcard/Android/data/"));
-            }
-            await Task.WhenAll(tasks);
-            //foreach (var ip in ipHeadsetList)
-            //{
-            //    await RunCommand("adb", $"-s {ip} shell mkdir -p /sdcard/Android/data/{bundleID}");
-            //    Debug.WriteLine(await RunCommand("adb", $"-s {ip} shell unzip /sdcard/Android/data/com.easyconnect.agent/files/"));
-
-            //}
+            buttonAction($"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " +
+                "/sdcard/Android/data/");
         }
         private async void buttonINSTALL_Click(object sender, EventArgs e)
         {
-            var tasks = new List<Task>();
-            foreach (var ip in ipHeadsetList)
-            {
-                tasks.Add(RunCommand("adb", $"-s {ip} install \"C:\\Users\\Univrse\\EXPERIENCE\\PICO\\Showroom\\BlackMirror\\apk\\136100_bm-identity-eclipso_xroam_pico-4-ultra_2026-02-02_S001_v001.apk\""));
-            }
-            await Task.WhenAll(tasks);
+            buttonAction("install \"D:\\SANTIAGO\\INTUITIVA\\TOOLS\\DEPLOY\\apk\\PICO_FairytalesDemo_v.1.0.1.apk\"");
         }
-        private void textBoxBUNDLEID_TextChanged(object sender, EventArgs e)
+
+        private async void buttonAction(string arguments)
         {
-            bundleID = textBoxBUNDLEID.Text;
+            try
+            {
+                var tasks = new List<Task>();
+                foreach (var device in devicesList)
+                {
+                    var task = RunCommand("adb", $"-s {device.ipAddress} {arguments}");
+                    tasks.Add(task);
+                }
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
         }
+
+        private async void StartServerConnection()
+        {
+            httpListener = new HttpListener();
+            httpListener.Prefixes.Add("http://127.0.0.1:7777/");
+            httpListener.Start();
+
+            Debug.WriteLine("ESCUCHANDO EN EL PUERTO 8000");
+
+            while (true)
+            {
+                var context = await httpListener.GetContextAsync();
+                await Task.Run(() => HandleRequest(context));
+            }
+        }
+        private async Task HandleRequest(HttpListenerContext context)
+        {
+            try
+            {
+                if (context.Request.HttpMethod == "POST")
+                {
+                    using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+                    {
+                        string body = await reader.ReadToEndAsync();
+
+                        Debug.WriteLine("JSON recibido:");
+                        Debug.WriteLine(body);
+
+                        // Parsear JSON
+                        var report = JsonSerializer.Deserialize<DeviceReport>(body);
+
+                        Debug.WriteLine($"Device: {report.deviceId}");
+                        Debug.WriteLine($"Status: {report.status}");
+
+                        context.Response.StatusCode = 200;
+                        //listBoxDEVICES.Items.IndexOf();
+                    }
+                }
+                else
+                {
+                    context.Response.StatusCode = 405;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                context.Response.StatusCode = 500;
+            }
+            finally
+            {
+                context.Response.Close();
+            }
+        }
+
     }
+
+    public class Devices
+    {
+        public Devices(string ip, string download, string install, bool launch)
+        {
+            ipAddress = ip;
+            downloadStatus = download;
+            installStatus = install;
+            launchStatus = launch;
+        }
+        public string ipAddress { get; set; }
+        public string downloadStatus { get; set; }
+        public string installStatus { get; set; }
+        public bool launchStatus { get; set; }
+    }
+    public class DeviceReport
+    {
+        public string deviceId { get; set; }
+        public string bundle { get; set; }
+        public string status { get; set; }
+        public long timestamp { get; set; }
+    }
+
     public static class ProcessExtensions
     {
         /// <summary>
