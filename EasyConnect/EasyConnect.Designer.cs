@@ -30,6 +30,8 @@
         {
             this.Title = new System.Windows.Forms.Label();
             this.groupIPConnect = new System.Windows.Forms.GroupBox();
+            this.textBoxNEWDEVICE = new System.Windows.Forms.TextBox();
+            this.checkBoxNEWDEVICE = new System.Windows.Forms.CheckBox();
             this.buttonCONNECT = new System.Windows.Forms.Button();
             this.textBoxPORT = new System.Windows.Forms.TextBox();
             this.textBoxIP = new System.Windows.Forms.TextBox();
@@ -70,6 +72,8 @@
             // 
             // groupIPConnect
             // 
+            this.groupIPConnect.Controls.Add(this.textBoxNEWDEVICE);
+            this.groupIPConnect.Controls.Add(this.checkBoxNEWDEVICE);
             this.groupIPConnect.Controls.Add(this.buttonCONNECT);
             this.groupIPConnect.Controls.Add(this.textBoxPORT);
             this.groupIPConnect.Controls.Add(this.textBoxIP);
@@ -79,14 +83,34 @@
             this.groupIPConnect.Margin = new System.Windows.Forms.Padding(2);
             this.groupIPConnect.Name = "groupIPConnect";
             this.groupIPConnect.Padding = new System.Windows.Forms.Padding(2);
-            this.groupIPConnect.Size = new System.Drawing.Size(331, 122);
+            this.groupIPConnect.Size = new System.Drawing.Size(331, 157);
             this.groupIPConnect.TabIndex = 1;
             this.groupIPConnect.TabStop = false;
             this.groupIPConnect.Text = "IP Connection";
             // 
+            // textBoxNEWDEVICE
+            // 
+            this.textBoxNEWDEVICE.Location = new System.Drawing.Point(120, 86);
+            this.textBoxNEWDEVICE.Name = "textBoxNEWDEVICE";
+            this.textBoxNEWDEVICE.Size = new System.Drawing.Size(100, 20);
+            this.textBoxNEWDEVICE.TabIndex = 7;
+            this.textBoxNEWDEVICE.Visible = false;
+            this.textBoxNEWDEVICE.TextChanged += new System.EventHandler(this.textBoxNEWDEVICE_TextChanged);
+            // 
+            // checkBoxNEWDEVICE
+            // 
+            this.checkBoxNEWDEVICE.AutoSize = true;
+            this.checkBoxNEWDEVICE.Location = new System.Drawing.Point(20, 89);
+            this.checkBoxNEWDEVICE.Name = "checkBoxNEWDEVICE";
+            this.checkBoxNEWDEVICE.Size = new System.Drawing.Size(94, 17);
+            this.checkBoxNEWDEVICE.TabIndex = 6;
+            this.checkBoxNEWDEVICE.Text = "NEW DEVICE";
+            this.checkBoxNEWDEVICE.UseVisualStyleBackColor = true;
+            this.checkBoxNEWDEVICE.CheckedChanged += new System.EventHandler(this.checkBoxNEWDEVICE_CheckedChanged);
+            // 
             // buttonCONNECT
             // 
-            this.buttonCONNECT.Location = new System.Drawing.Point(120, 85);
+            this.buttonCONNECT.Location = new System.Drawing.Point(120, 123);
             this.buttonCONNECT.Margin = new System.Windows.Forms.Padding(2);
             this.buttonCONNECT.Name = "buttonCONNECT";
             this.buttonCONNECT.Size = new System.Drawing.Size(82, 20);
@@ -118,7 +142,7 @@
             // labelPort
             // 
             this.labelPort.AutoSize = true;
-            this.labelPort.Location = new System.Drawing.Point(68, 51);
+            this.labelPort.Location = new System.Drawing.Point(68, 56);
             this.labelPort.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelPort.Name = "labelPort";
             this.labelPort.Size = new System.Drawing.Size(40, 13);
@@ -128,7 +152,7 @@
             // labelIP
             // 
             this.labelIP.AutoSize = true;
-            this.labelIP.Location = new System.Drawing.Point(88, 21);
+            this.labelIP.Location = new System.Drawing.Point(88, 26);
             this.labelIP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelIP.Name = "labelIP";
             this.labelIP.Size = new System.Drawing.Size(20, 13);
@@ -145,7 +169,7 @@
             this.groupBoxSERVER.Controls.Add(this.textBoxSERVERIP);
             this.groupBoxSERVER.Controls.Add(this.labelSERVERPORT);
             this.groupBoxSERVER.Controls.Add(this.labelSERVERIP);
-            this.groupBoxSERVER.Location = new System.Drawing.Point(9, 179);
+            this.groupBoxSERVER.Location = new System.Drawing.Point(9, 213);
             this.groupBoxSERVER.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxSERVER.Name = "groupBoxSERVER";
             this.groupBoxSERVER.Padding = new System.Windows.Forms.Padding(2);
@@ -289,6 +313,7 @@
             this.labelIPDEVICE.Size = new System.Drawing.Size(25, 13);
             this.labelIPDEVICE.TabIndex = 4;
             this.labelIPDEVICE.Text = "aaa";
+            this.labelIPDEVICE.Click += new System.EventHandler(this.labelIPDEVICE_Click);
             // 
             // groupBoxDEVICES
             // 
@@ -378,6 +403,8 @@
         private System.Windows.Forms.Button buttonMOVE;
         private System.Windows.Forms.Label labelBUNDLEID;
         private System.Windows.Forms.Label labelBUNDLE;
+        private System.Windows.Forms.CheckBox checkBoxNEWDEVICE;
+        private System.Windows.Forms.TextBox textBoxNEWDEVICE;
     }
 }
 
