@@ -79,7 +79,8 @@ namespace EasyConnect
         }
         private async void buttonINSTALL_Click(object sender, EventArgs e)
         {
-            _AdbService.AdbInstall(_ConsoleService, _WindowVariables);
+            _DeployController?.StartInstaller();
+            //_AdbService.AdbInstall(_ConsoleService, _WindowVariables);
         }
 
         private void checkBoxNEWDEVICE_CheckedChanged(object sender, EventArgs e)

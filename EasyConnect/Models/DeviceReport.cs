@@ -23,6 +23,7 @@ namespace EasyConnect.Models
         public string bundle { get; set; }
         public string downloadStatus { get; set; }
         public string installStatus { get; set;  }
+        public string apkPath { get; set; }
         public long timestamp { get; set; }
 
         public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t\t{installStatus}"; }

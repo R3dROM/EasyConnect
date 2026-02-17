@@ -49,5 +49,10 @@ namespace EasyConnect.Controllers
                     $"Output: {Output}");
             }
         }
+        public async void StartInstaller()
+        {
+            var session = await _consoleService.RunCommandAsync("adb", " shell cmd package install-create -r -S 1659360127");
+            Debug.WriteLine(session);
+        }
     }
 }
