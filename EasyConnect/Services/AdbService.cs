@@ -12,46 +12,19 @@ namespace EasyConnect.Services
 {
     public class AdbService
     {
-        public async Task<(int ExitCode, string Output)> RunCommandAsync(string fileName, string arguments, IProgress<int> progress = null)
+        public async Task<(int ExitCode, string Output)> AdbConnection(ConsoleService _ConsoleService, string ip, string port)
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using (var process = Process.Start(psi))
-            {
-                var outputTask = process.StandardOutput.ReadToEndAsync();
-                var errorTask = process.StandardError.ReadToEndAsync();
-
-                await Task.WhenAll(outputTask, errorTask);
-                await process.WaitForExitAsync();
-
-                string combined = outputTask.Result + errorTask.Result;
-
-                return (process.ExitCode, combined);
-            }
-        }
-
-        public async Task<(int ExitCode, string Output)> AdbConnection(string ip, string port)
-        {
-            var Output = await RunCommandAsync("adb", $" connect {ip}:{port}");
+            var Output = await _ConsoleService.RunCommandAsync("adb", $" connect {ip}:{port}");
             return (Output);
         }
-        public async Task<(int ExitCode, string Output)> AdbPair(string ip, string port, string code)
+        public async Task<(int ExitCode, string Output)> AdbPair(ConsoleService _ConsoleService, string ip, string port, string code)
         {
-            var Output = await RunCommandAsync("adb", $" pair {ip}:{port} {code}");
+            var Output = await _ConsoleService.RunCommandAsync("adb", $" pair {ip}:{port} {code}");
             return (Output);
         }
-        public async Task<(int ExitCode, string Output)> AdbCurrentDevices(List<DeviceReport> devicesList, ListBox listBox)
+        public async Task<(int ExitCode, string Output)> AdbCurrentDevices(ConsoleService _ConsoleService, List<DeviceReport> devicesList, ListBox listBox)
         {
-            var (ExitCode, ips) = await RunCommandAsync("adb", "devices", null);
+            var (ExitCode, ips) = await _ConsoleService.RunCommandAsync("adb", "devices", null);
             if (ExitCode != 0)
                 return (ExitCode, "ERROR");
 
@@ -69,14 +42,14 @@ namespace EasyConnect.Services
             return (ExitCode, ips);
         }
 
-        public async void AdbDownload(WindowVariables windowVariables)
+        public async void AdbDownload(ConsoleService _ConsoleService, WindowVariables windowVariables)
         {
             var ipServer = windowVariables.GetServerIp();
             var portServer = windowVariables.GetServerPort();
             var bundleID = windowVariables.GetBundleId();
             var devices = windowVariables.GetDevicesList();
 
-            var debug = await AdbAction(devices, $"shell am start-foreground-service " +
+            var debug = await AdbAction(_ConsoleService, devices, $"shell am start-foreground-service " +
                         $"-n com.easyconnect.agent/.DownloadService " +
                         $"--es url http://{ipServer}:{portServer} " +
                         $"--es bundle {bundleID}");
@@ -85,35 +58,35 @@ namespace EasyConnect.Services
                 Debug.WriteLine(device.ToString());
             }
         }
-        public async void AdbMove(WindowVariables windowVariables)
+        public async void AdbMove(ConsoleService _ConsoleService, WindowVariables windowVariables)
         {
             var bundleID = windowVariables.GetBundleId();
             var devices = windowVariables.GetDevicesList();
 
-            var debug = await AdbAction(devices, $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " + 
+            var debug = await AdbAction(_ConsoleService, devices, $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " + 
                 "/sdcard/Android/data/");
             foreach( var device in debug)
             {
                 Debug.WriteLine(device.ToString());
             }
         }
-        public async void AdbInstall(WindowVariables windowVariables)
+        public async void AdbInstall(ConsoleService _ConsoleService, WindowVariables windowVariables)
         {
             var devices = windowVariables.GetDevicesList();
-            var debug = await AdbAction(devices, "install \"D:\\SANTIAGO\\INTUITIVA\\TOOLS\\DEPLOY\\apk\\PICO_FairytalesDemo_v.1.0.1.apk\"");
+            var debug = await AdbAction(_ConsoleService, devices, "install \"C:\\Users\\Univrse\\EXPERIENCE\\DEPLOY\\apk\\136100_bm-identity-xroam_pico-4-ultra_2026-02-04_S005_v004.apk\"");
             foreach (var device in debug)
             {
                 Debug.WriteLine(device.ToString());
             }
         }
-        private async Task<List<(int ExitCode,string Output)>> AdbAction(List<DeviceReport> devicesList, string arguments)
+        private async Task<List<(int ExitCode,string Output)>> AdbAction(ConsoleService _ConsoleService, List<DeviceReport> devicesList, string arguments)
         {
             try
             {
                 var tasks = new List<Task<(int ExitCode, string Output)>>();
                 foreach (var device in devicesList)
                 {
-                    var task = RunCommandAsync("adb", $"-s {device.deviceId} {arguments}");
+                    var task = _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} {arguments}");
                     tasks.Add(task);
                 }
                 var output = await Task.WhenAll(tasks);

@@ -16,16 +16,18 @@ namespace EasyConnect.Controllers
     public class DeployController
     {
         private readonly AdbService _adbService;
+        private readonly ConsoleService _consoleService;
         private WindowVariables _windowVariables;
 
-        public DeployController(AdbService adbService, WindowVariables windowVariables)
+        public DeployController(ConsoleService consoleService, AdbService adbService, WindowVariables windowVariables)
         {
             _adbService = adbService;
+            _consoleService = consoleService;
             _windowVariables = windowVariables;
         }
         public async void StartDeployAsync(string arguments)
         {
-            await _adbService.RunCommandAsync("adb", arguments);
+            await _consoleService.RunCommandAsync("adb", arguments);
         }
         public async void StartHeadsetConnection()
         {
@@ -36,13 +38,13 @@ namespace EasyConnect.Controllers
             bool newDevice = _windowVariables.GetNewDeviceCheck();
             if (newDevice)
             {
-                var (ExceptionCode, Output) = await _adbService.AdbPair(ipHeadset, portHeadset, codeHeadset);
+                var (ExceptionCode, Output) = await _adbService.AdbPair(_consoleService, ipHeadset, portHeadset, codeHeadset);
                 Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                     $"Output: {Output}");
             }
             else
             {
-                var (ExceptionCode, Output) = await _adbService.AdbConnection(ipHeadset, portHeadset);
+                var (ExceptionCode, Output) = await _adbService.AdbConnection(_consoleService, ipHeadset, portHeadset);
                 Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                     $"Output: {Output}");
             }

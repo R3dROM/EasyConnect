@@ -83,6 +83,7 @@
     <Compile Include="Models\Devices.cs" />
     <Compile Include="Models\WindowVariables.cs" />
     <Compile Include="Services\AdbService.cs" />
+    <Compile Include="Services\ConsoleService.cs" />
     <Compile Include="Src\ProcessExtensions.cs" />
     <Compile Include="EasyConnect.cs">
       <SubType>Form</SubType>

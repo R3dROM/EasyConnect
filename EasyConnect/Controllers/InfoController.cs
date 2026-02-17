@@ -13,10 +13,12 @@ namespace EasyConnect.Controllers
     public class InfoController
     {
         private readonly AdbService _adbService;
+        private readonly ConsoleService _consoleService;
         private WindowVariables _windowVariables;
 
-        public InfoController(AdbService adbService, WindowVariables windowVariables)
+        public InfoController(ConsoleService consoleService, AdbService adbService, WindowVariables windowVariables)
         {
+            _consoleService = consoleService;
             _adbService = adbService;
             _windowVariables = windowVariables;
         }
@@ -24,7 +26,7 @@ namespace EasyConnect.Controllers
         public async void StartDevicesInfo(ListBox list, Label label_ip)
         {
             var tasks = new List<Task>();
-            tasks.Add(_adbService.AdbCurrentDevices(_windowVariables.GetDevicesList(), list));
+            tasks.Add(_adbService.AdbCurrentDevices(_consoleService, _windowVariables.GetDevicesList(), list));
             tasks.Add(GetCurrentDeviceIP(label_ip));
 
             await Task.WhenAll(tasks);

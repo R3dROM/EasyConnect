@@ -24,11 +24,12 @@ namespace EasyConnect
 
         private WindowVariables _WindowVariables = new WindowVariables();
         private AdbService _AdbService = new AdbService();
+        private ConsoleService _ConsoleService = new ConsoleService();
         public WINDOW()
         {
             InitializeComponent();
-            _DeployController = new DeployController(_AdbService, _WindowVariables);
-            _InfoController = new InfoController(_AdbService, _WindowVariables);
+            _DeployController = new DeployController(_ConsoleService, _AdbService, _WindowVariables);
+            _InfoController = new InfoController(_ConsoleService, _AdbService, _WindowVariables);
             _HttpController = new HttpController(_AdbService, _WindowVariables);
 
             _InfoController.StartDevicesInfo(listBoxDEVICES, labelIPDEVICE);
@@ -66,7 +67,7 @@ namespace EasyConnect
         }
         private async void buttonDOWNLOAD_Click(object sender, EventArgs e)
         {
-            _AdbService.AdbDownload(_WindowVariables);
+            _AdbService.AdbDownload(_ConsoleService, _WindowVariables);
         }
         private void listBoxDEVICES_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -74,11 +75,11 @@ namespace EasyConnect
         }
         private async void buttonMOVE_Click(object sender, EventArgs e)
         {
-            _AdbService.AdbMove(_WindowVariables);
+            _AdbService.AdbMove(_ConsoleService, _WindowVariables);
         }
         private async void buttonINSTALL_Click(object sender, EventArgs e)
         {
-            _AdbService.AdbInstall(_WindowVariables);
+            _AdbService.AdbInstall(_ConsoleService, _WindowVariables);
         }
 
         private void checkBoxNEWDEVICE_CheckedChanged(object sender, EventArgs e)

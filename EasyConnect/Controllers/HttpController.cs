@@ -35,7 +35,7 @@ namespace EasyConnect.Controllers
             {
                 listBox.Items.Clear();
                 var fileNames = await GetFileNameFromServer();
-                label.Text = File.ReadAllText("D:\\SANTIAGO\\INTUITIVA\\TOOLS\\DEPLOY\\bundleID.txt");
+                label.Text = File.ReadAllText("C:\\Users\\Univrse\\EXPERIENCE\\DEPLOY\\bundleID.txt");
                 _WindowVariables.SetBundleId(label.Text);
                 foreach (var file in fileNames)
                 {
@@ -87,6 +87,8 @@ namespace EasyConnect.Controllers
 
         private async void StartServerListener()
         {
+            if (_HttpListener.IsListening)
+                return;
             _HttpListener = new HttpListener();
             _HttpListener.Prefixes.Add("http://127.0.0.1:7777/");
             _HttpListener.Start();
