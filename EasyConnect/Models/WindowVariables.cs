@@ -43,6 +43,8 @@ namespace EasyConnect.Models
         public void SetBundleId(string bundle) { _bundle = bundle; }
         // SET DEVICES
         public void AddDevice(DeviceReport device) { _devicesList.Add(device); }
+        public void UpdateDevice(DeviceReport oldDevice, DeviceReport newDevice) { _devicesList.Remove(oldDevice); 
+            _devicesList.Add(newDevice); }
         public void RemoveDevice(DeviceReport device) { _devicesList.Remove(device); }
         //SET HEADSET
         public void SetHeadsetCode(string codeHeadset) { _headsetCode = codeHeadset; }

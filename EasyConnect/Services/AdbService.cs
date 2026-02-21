@@ -27,18 +27,6 @@ namespace EasyConnect.Services
             var (ExitCode, ips) = await _ConsoleService.RunCommandAsync("adb", "devices", null);
             if (ExitCode != 0)
                 return (ExitCode, "ERROR");
-
-            var matches = Regex.Matches(ips, @"(\d+\.\d+\.\d+\.\d+):\d+");
-            foreach (Match match in matches)
-            {
-                string ipAddress = match.Groups[1].Value;
-                DeviceReport device = new DeviceReport(ipAddress);
-                devicesList.Add(device);
-                Debug.WriteLine("IP encontrada: " + ipAddress);
-
-                object deviceInfo = device.DeviceInfoReport();
-                listBox.Items.Add(deviceInfo);
-            }
             return (ExitCode, ips);
         }
 
@@ -73,19 +61,20 @@ namespace EasyConnect.Services
         public async void AdbInstall(ConsoleService _ConsoleService, WindowVariables windowVariables)
         {
             var devices = windowVariables.GetDevicesList();
-            var debug = await AdbAction(_ConsoleService, devices, "install \"C:\\Users\\Univrse\\EXPERIENCE\\DEPLOY\\apk\\136100_bm-identity-xroam_pico-4-ultra_2026-02-04_S005_v004.apk\"");
-            foreach (var device in debug)
-            {
-                Debug.WriteLine(device.ToString());
-            }
+            var output = await AdbAction(_ConsoleService, devices, null, true);
         }
-        private async Task<List<(int ExitCode,string Output)>> AdbAction(ConsoleService _ConsoleService, List<DeviceReport> devicesList, string arguments)
+        private async Task<List<(int ExitCode,string Output)>> AdbAction(ConsoleService _ConsoleService, List<DeviceReport> devicesList, string arguments = null, bool instalHandler = false)
         {
             try
             {
                 var tasks = new List<Task<(int ExitCode, string Output)>>();
                 foreach (var device in devicesList)
                 {
+                    if (instalHandler)
+                    {
+                        InstallHandler(device, arguments, _ConsoleService);
+                        continue;
+                    }
                     var task = _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} {arguments}");
                     tasks.Add(task);
                 }
@@ -97,6 +86,43 @@ namespace EasyConnect.Services
                 Debug.WriteLine(ex);
                 return null;
             }
+        }
+        private async void InstallHandler(DeviceReport device, string arguments, ConsoleService _ConsoleService)
+        {
+            var task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package install-create -r -S {device.apkSize}");
+            var sessionId = FindSessionID(task.Output);
+            Debug.WriteLine(task.Output);
+            Debug.WriteLine(sessionId);
+            task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell mv {device.apkPath} /data/local/tmp/");
+            Debug.WriteLine(task.Output);
+            task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package " +
+                $"install-write -S {device.apkSize} {sessionId} base.apk /data/local/tmp/{device.apkName}");
+            Debug.WriteLine(task.Output);
+            task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package " +
+                $"install-commit {sessionId}");
+            Debug.WriteLine(task.Output);
+        }
+        private string FindSessionID(string src)
+        {
+            int i = 0;
+            bool found = false;
+            string substr = "";
+            while (!found && i < src.Length)
+            {
+                if (src[i] ==  '[')
+                    found = true;
+                i++;
+            }
+            found = false;
+            while (!found && i < src.Length)
+            {
+                if (src[i] == ']')
+                    found = true;
+                else
+                    substr += src[i];
+                i++;
+            }
+            return substr;
         }
     }
 }

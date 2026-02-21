@@ -32,7 +32,7 @@ namespace EasyConnect
             _InfoController = new InfoController(_ConsoleService, _AdbService, _WindowVariables);
             _HttpController = new HttpController(_AdbService, _WindowVariables);
 
-            _InfoController.StartDevicesInfo(listBoxDEVICES, labelIPDEVICE);
+            _InfoController?.StartDevicesInfo(listBoxDEVICES, labelIPDEVICE);
         }
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -48,7 +48,7 @@ namespace EasyConnect
         }
         private async void buttonCONNECT_Click(object sender, EventArgs e)
         {
-            _DeployController.StartHeadsetConnection();
+            _DeployController?.StartHeadsetConnection();
         }
         private void textBoxSERVERIP_TextChanged(object sender, EventArgs e)
         {
@@ -80,7 +80,6 @@ namespace EasyConnect
         private async void buttonINSTALL_Click(object sender, EventArgs e)
         {
             _DeployController?.StartInstaller();
-            //_AdbService.AdbInstall(_ConsoleService, _WindowVariables);
         }
 
         private void checkBoxNEWDEVICE_CheckedChanged(object sender, EventArgs e)

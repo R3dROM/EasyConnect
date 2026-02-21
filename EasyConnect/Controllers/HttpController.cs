@@ -4,11 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -35,7 +32,7 @@ namespace EasyConnect.Controllers
             {
                 listBox.Items.Clear();
                 var fileNames = await GetFileNameFromServer();
-                label.Text = File.ReadAllText("D:\\SANTIAGO\\INTUITIVA\\TOOLS\\DEPLOY\\bundleID.txt");
+                label.Text = File.ReadAllText("C:\\Users\\Univrse\\EXPERIENCE\\DEPLOY\\bundleID.txt");
                 _WindowVariables.SetBundleId(label.Text);
                 foreach (var file in fileNames)
                 {
@@ -120,6 +117,10 @@ namespace EasyConnect.Controllers
                         Debug.WriteLine($"Device IP: {report.deviceId}");
                         Debug.WriteLine($"Download Status: {report.downloadStatus}");
                         Debug.WriteLine($"Install Status: {report.installStatus}");
+                        Debug.WriteLine($"Apk size: {report.apkSize}");
+
+                        var deviceToUpdate = _WindowVariables?.GetDevicesList().Find(d => d.deviceId == report.deviceId);
+                        _WindowVariables.UpdateDevice(deviceToUpdate, report);
 
                         context.Response.StatusCode = 200;
                     }

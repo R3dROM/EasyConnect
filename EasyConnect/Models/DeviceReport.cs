@@ -24,6 +24,8 @@ namespace EasyConnect.Models
         public string downloadStatus { get; set; }
         public string installStatus { get; set;  }
         public string apkPath { get; set; }
+        public string apkName { get; set; }
+        public long apkSize { get; set; }
         public long timestamp { get; set; }
 
         public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t\t{installStatus}"; }

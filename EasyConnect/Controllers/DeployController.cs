@@ -25,11 +25,15 @@ namespace EasyConnect.Controllers
             _consoleService = consoleService;
             _windowVariables = windowVariables;
         }
-        public async void StartDeployAsync(string arguments)
+        public async Task StartDeployAsync(string arguments)
         {
             await _consoleService.RunCommandAsync("adb", arguments);
         }
-        public async void StartHeadsetConnection()
+        public async Task StartInstaller()
+        {
+            _adbService.AdbInstall(_consoleService, _windowVariables);
+        }
+        public async Task StartHeadsetConnection()
         {
             string ipHeadset = _windowVariables.GetHeadsetIp();
             string portHeadset = _windowVariables.GetHeadsetPort();
@@ -48,11 +52,6 @@ namespace EasyConnect.Controllers
                 Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                     $"Output: {Output}");
             }
-        }
-        public async void StartInstaller()
-        {
-            var session = await _consoleService.RunCommandAsync("adb", " shell cmd package install-create -r -S 1659360127");
-            Debug.WriteLine(session);
         }
     }
 }
