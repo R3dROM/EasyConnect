@@ -1,43 +1,37 @@
 ﻿using EasyConnect.Models;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace EasyConnect.Services
 {
     public class AdbService
     {
-        public async Task<(int ExitCode, string Output)> AdbConnection(ConsoleService _ConsoleService, string ip, string port)
+        private readonly ConsoleService _ConsoleService;
+        private WindowVariables _windowVariables;
+        public AdbService(ConsoleService _ConsoleService, WindowVariables _windowVariables)
         {
-            var Output = await _ConsoleService.RunCommandAsync("adb", $" connect {ip}:{port}");
-            return (Output);
-        }
-        public async Task<(int ExitCode, string Output)> AdbPair(ConsoleService _ConsoleService, string ip, string port, string code)
-        {
-            var Output = await _ConsoleService.RunCommandAsync("adb", $" pair {ip}:{port} {code}");
-            return (Output);
-        }
-        public async Task<(int ExitCode, string Output)> AdbCurrentDevices(ConsoleService _ConsoleService, List<DeviceReport> devicesList, ListBox listBox)
-        {
-            var (ExitCode, ips) = await _ConsoleService.RunCommandAsync("adb", "devices", null);
-            if (ExitCode != 0)
-                return (ExitCode, "ERROR");
-            return (ExitCode, ips);
+            this._ConsoleService = _ConsoleService;
+            this._windowVariables = _windowVariables;
         }
 
-        public async void AdbDownload(ConsoleService _ConsoleService, WindowVariables windowVariables)
-        {
-            var ipServer = windowVariables.GetServerIp();
-            var portServer = windowVariables.GetServerPort();
-            var bundleID = windowVariables.GetBundleId();
-            var devices = windowVariables.GetDevicesList();
+        public async Task<(int ExitCode, string Output)> AdbConnection(string ip, string port)
+            => await _ConsoleService.RunAdbAsync($"connect {ip}:{port}");
+        public async Task<(int ExitCode, string Output)> AdbPair(string ip, string port, string code)
+            => await _ConsoleService.RunAdbAsync($"pair {ip}:{port} {code}");
+        public async Task<(int ExitCode, string Output)> AdbCurrentDevices()
+            => await _ConsoleService.RunAdbAsync($"devices");
 
-            var debug = await AdbAction(_ConsoleService, devices, $"shell am start-foreground-service " +
+        public async Task AdbDownload()
+        {
+            var ipServer = _windowVariables.GetServerIp();
+            var portServer = _windowVariables.GetServerPort();
+            var bundleID = _windowVariables.GetBundleId();
+            var devices = _windowVariables.GetDevicesList();
+
+            var debug = await AdbOverDevice(_ConsoleService, $"shell am start-foreground-service " +
                         $"-n com.easyconnect.agent/.DownloadService " +
                         $"--es url http://{ipServer}:{portServer} " +
                         $"--es bundle {bundleID}");
@@ -46,83 +40,83 @@ namespace EasyConnect.Services
                 Debug.WriteLine(device.ToString());
             }
         }
-        public async void AdbMove(ConsoleService _ConsoleService, WindowVariables windowVariables)
+        public async Task AdbMove()
         {
-            var bundleID = windowVariables.GetBundleId();
-            var devices = windowVariables.GetDevicesList();
+            var bundleID = _windowVariables.GetBundleId();
+            var devices = _windowVariables.GetDevicesList();
 
-            var debug = await AdbAction(_ConsoleService, devices, $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " + 
+            var debug = await AdbOverDevice(_ConsoleService, $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " + 
                 "/sdcard/Android/data/");
             foreach( var device in debug)
             {
                 Debug.WriteLine(device.ToString());
             }
         }
-        public async void AdbInstall(ConsoleService _ConsoleService, WindowVariables windowVariables)
+        public async Task AdbInstall()
         {
-            var devices = windowVariables.GetDevicesList();
-            var output = await AdbAction(_ConsoleService, devices, null, true);
+            var devices = _windowVariables.GetDevicesList();
+            var output = await AdbOverDevice(_ConsoleService, null, true);
         }
-        private async Task<List<(int ExitCode,string Output)>> AdbAction(ConsoleService _ConsoleService, List<DeviceReport> devicesList, string arguments = null, bool instalHandler = false)
+        private async Task<List<(int ExitCode,string Output)>> AdbOverDevice(ConsoleService _ConsoleService, string arguments = null, bool instalHandler = false)
         {
-            try
+            var deviceList = _windowVariables.GetDevicesList();
+            var tasks = new List<Task<(int ExitCode, string Output)>>();
+            foreach (var device in deviceList)
             {
-                var tasks = new List<Task<(int ExitCode, string Output)>>();
-                foreach (var device in devicesList)
+                if (instalHandler)
                 {
-                    if (instalHandler)
-                    {
-                        InstallHandler(device, arguments, _ConsoleService);
-                        continue;
-                    }
+                    var task = InstallHandler(device, arguments);
+                    tasks.Add(task);
+                }
+                else
+                {
                     var task = _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} {arguments}");
                     tasks.Add(task);
                 }
-                var output = await Task.WhenAll(tasks);
-                return output.ToList();
+                
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                return null;
-            }
+            var output = await Task.WhenAll(tasks);
+            return output.ToList();
         }
-        private async void InstallHandler(DeviceReport device, string arguments, ConsoleService _ConsoleService)
+        private async Task<(int ExitCode, string Output)> InstallHandler(DeviceReport device, string arguments)
         {
+            var result = "";
             var task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package install-create -r -S {device.apkSize}");
+            if (task.ExitCode != 0)
+            {
+                return task;
+            }
+            result += task.Output + "\n";
             var sessionId = FindSessionID(task.Output);
-            Debug.WriteLine(task.Output);
+            if (sessionId == null || sessionId == "")
+            {
+                return task;
+            }
+            result += task.Output + "\n";
             Debug.WriteLine(sessionId);
-            task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell mv {device.apkPath} /data/local/tmp/");
-            Debug.WriteLine(task.Output);
+
             task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package " +
-                $"install-write -S {device.apkSize} {sessionId} base.apk /data/local/tmp/{device.apkName}");
+                $"install-write -S {device.apkSize} {sessionId} base.apk {device.apkPath}");
+            if (task.ExitCode != 0)
+            {
+                return task;
+            }
+            result += task.Output + "\n";
             Debug.WriteLine(task.Output);
             task = await _ConsoleService.RunCommandAsync("adb", $"-s {device.deviceId} shell cmd package " +
                 $"install-commit {sessionId}");
+            if (task.ExitCode != 0)
+            {
+                return task;
+            }
+            result += task.Output + "\n";
             Debug.WriteLine(task.Output);
+            return (0, result + "\nSUCCESS");
         }
         private string FindSessionID(string src)
         {
-            int i = 0;
-            bool found = false;
-            string substr = "";
-            while (!found && i < src.Length)
-            {
-                if (src[i] ==  '[')
-                    found = true;
-                i++;
-            }
-            found = false;
-            while (!found && i < src.Length)
-            {
-                if (src[i] == ']')
-                    found = true;
-                else
-                    substr += src[i];
-                i++;
-            }
-            return substr;
+            var match = Regex.Match(src, @"\[(.*?)\]");
+            return match.Success ? match.Groups[1].Value : null;
         }
     }
 }

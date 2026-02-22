@@ -42,8 +42,14 @@ namespace EasyConnect.Models
         public void SetServerPort(string port) { _serverPort = port; }
         public void SetBundleId(string bundle) { _bundle = bundle; }
         // SET DEVICES
-        public void AddDevice(DeviceReport device) { _devicesList.Add(device); }
-        public void UpdateDevice(DeviceReport oldDevice, DeviceReport newDevice) { _devicesList.Remove(oldDevice); 
+        public void AddDevice(DeviceReport device) {
+            var newDevice = _devicesList.Find(d => d.deviceId == device.deviceId);
+            if (newDevice == null)
+                _devicesList.Add(device); 
+        }
+        public void UpdateDevice(DeviceReport oldDevice, DeviceReport newDevice) { 
+            if (_devicesList.Contains(oldDevice))
+                _devicesList.Remove(oldDevice); 
             _devicesList.Add(newDevice); }
         public void RemoveDevice(DeviceReport device) { _devicesList.Remove(device); }
         //SET HEADSET

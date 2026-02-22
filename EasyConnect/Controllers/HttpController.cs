@@ -16,73 +16,51 @@ namespace EasyConnect.Controllers
     public class HttpController
     {
         private readonly AdbService _AdbService;
+        private readonly InfoController _InfoController;
         private WindowVariables _WindowVariables;
         private HttpListener _HttpListener;
 
-        public HttpController(AdbService adbService, WindowVariables windowVariables)
+        public HttpController(AdbService adbService, WindowVariables windowVariables, InfoController infoController)
         {
             _AdbService = adbService;
             _WindowVariables = windowVariables;
+            _InfoController = infoController;
         }
 
 
-        public async void StartServerConnection(ListBox listBox, Label label)
+        public async Task<Manifest> StartServerConnection()
         {
-            try
-            {
-                listBox.Items.Clear();
-                var fileNames = await GetFileNameFromServer();
-                label.Text = File.ReadAllText("C:\\Users\\Univrse\\EXPERIENCE\\DEPLOY\\bundleID.txt");
-                _WindowVariables.SetBundleId(label.Text);
-                foreach (var file in fileNames)
-                {
-                    listBox.Items.Add(file.Remove(0, 2));
-                }
-                StartServerListener();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-            }
+            _ = StartServerListener();
+            var fileNames = await GetFileNameFromServer();
+            _WindowVariables.SetBundleId(fileNames.bundleID);
+            return fileNames;
         }
-        private async Task<List<string>> GetFileNameFromServer()
+        private async Task<Manifest> GetFileNameFromServer()
         {
-            var files = new List<string>();
+            Manifest files = new Manifest();
             var ipServer = _WindowVariables.GetServerIp();
             var portServer = _WindowVariables.GetServerPort();
-            string url = $"http://{ipServer}:{portServer}/";
+            string url = $"http://{ipServer}:{portServer}/manifest.json";
 
             using (HttpClient client = new HttpClient())
             {
                 try
                 {
                     var code = await client.GetAsync(url);
-                    Debug.WriteLine(code.Content.ToString());
-                    string html = await client.GetStringAsync(url);
+                    var json = await client.GetStringAsync(url);
 
-                    // Extrae href="archivo"
-                    Regex regex = new Regex("href=\"([^\"]+)\"");
-                    MatchCollection matches = regex.Matches(html);
-
-                    foreach (Match match in matches)
-                    {
-                        string name = match.Groups[1].Value;
-                        // Ignorar navegación
-                        if (name == "../" || name.EndsWith("/") || name.EndsWith("com") || name.EndsWith("asc") || name.EndsWith("desc"))
-                            continue;
-                        //Debug.WriteLine(name);
-                        files.Add(name);
-                    }
+                    files = JsonSerializer.Deserialize<Manifest>(json);
+                    return files;
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine(ex.Message);
+                    return null;
                 }
             }
-            return files;
         }
 
-        private async void StartServerListener()
+        private async Task StartServerListener()
         {
             if (_HttpListener != null && _HttpListener.IsListening)
                 return;
@@ -112,15 +90,8 @@ namespace EasyConnect.Controllers
                         Debug.WriteLine(body);
 
                         // Parsear JSON
-                        var report = JsonSerializer.Deserialize<DeviceReport>(body);
-
-                        Debug.WriteLine($"Device IP: {report.deviceId}");
-                        Debug.WriteLine($"Download Status: {report.downloadStatus}");
-                        Debug.WriteLine($"Install Status: {report.installStatus}");
-                        Debug.WriteLine($"Apk size: {report.apkSize}");
-
-                        var deviceToUpdate = _WindowVariables?.GetDevicesList().Find(d => d.deviceId == report.deviceId);
-                        _WindowVariables.UpdateDevice(deviceToUpdate, report);
+                        var deviceReport = JsonSerializer.Deserialize<DeviceReport>(body);
+                        _ = _InfoController.UpdateCurrentDevices(deviceReport);
 
                         context.Response.StatusCode = 200;
                     }

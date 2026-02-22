@@ -346,6 +346,7 @@
             this.labelBUNDLE.Size = new System.Drawing.Size(72, 13);
             this.labelBUNDLE.TabIndex = 11;
             this.labelBUNDLE.Text = "com.exam.ple";
+            this.labelBUNDLE.Click += new System.EventHandler(this.labelBUNDLE_Click);
             // 
             // WINDOW
             // 

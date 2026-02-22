@@ -31,7 +31,7 @@ namespace EasyConnect.Controllers
         }
         public async Task StartInstaller()
         {
-            _adbService.AdbInstall(_consoleService, _windowVariables);
+            await _adbService.AdbInstall();
         }
         public async Task StartHeadsetConnection()
         {
@@ -42,13 +42,13 @@ namespace EasyConnect.Controllers
             bool newDevice = _windowVariables.GetNewDeviceCheck();
             if (newDevice)
             {
-                var (ExceptionCode, Output) = await _adbService.AdbPair(_consoleService, ipHeadset, portHeadset, codeHeadset);
+                var (ExceptionCode, Output) = await _adbService.AdbPair(ipHeadset, portHeadset, codeHeadset);
                 Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                     $"Output: {Output}");
             }
             else
             {
-                var (ExceptionCode, Output) = await _adbService.AdbConnection(_consoleService, ipHeadset, portHeadset);
+                var (ExceptionCode, Output) = await _adbService.AdbConnection(ipHeadset, portHeadset);
                 Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                     $"Output: {Output}");
             }

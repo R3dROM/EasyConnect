@@ -16,18 +16,18 @@ namespace EasyConnect.Models
         public DeviceReport(string ip) 
         {
             deviceId = ip;
-            downloadStatus = "NOT YET";
-            installStatus = "NOT YET";
+            downloadStatus = false;
+            installStatus = false;
         }
         public string deviceId { get; set; }
         public string bundle { get; set; }
-        public string downloadStatus { get; set; }
-        public string installStatus { get; set;  }
+        public bool downloadStatus { get; set; }
+        public bool installStatus { get; set;  }
         public string apkPath { get; set; }
         public string apkName { get; set; }
         public long apkSize { get; set; }
         public long timestamp { get; set; }
 
-        public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t\t{installStatus}"; }
+        public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t{installStatus}"; }
     }
 }

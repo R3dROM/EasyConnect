@@ -24,24 +24,15 @@ namespace EasyConnect.Controllers
             _adbService = adbService;
             _windowVariables = windowVariables;
         }
-
-        public async void StartDevicesInfo(ListBox list, Label label_ip)
+        public async Task<string> StartDevicesInfo()
         {
-            var tasks = new List<Task>();
-            tasks.Add(_adbService.AdbCurrentDevices(_consoleService, _windowVariables.GetDevicesList(), list));
-            tasks.Add(GetCurrentDeviceIP(label_ip));
-
-            await Task.WhenAll(tasks);
+            var (Exit, ips) = await _adbService.AdbCurrentDevices();
+            await GetCurrentDeviceIP();
+            await StartCurrentDevices(ips);
+            return ips;
         }
-        public async Task GetCurrentDeviceIP(Label label_ip)
+        public async Task StartCurrentDevices(string ips)
         {
-            var currentIPs = await Dns.GetHostAddressesAsync(Dns.GetHostName());
-            _windowVariables.SetCurrentIp(currentIPs[currentIPs.Length - 1].ToString());
-            label_ip.Text = _windowVariables.GetCurrentIp();
-        }
-        public async Task UpdateCurrentDevices(string ips)
-        {
-
             var matches = Regex.Matches(ips, @"(\d+\.\d+\.\d+\.\d+):\d+");
             foreach (Match match in matches)
             {
@@ -49,10 +40,25 @@ namespace EasyConnect.Controllers
                 DeviceReport device = new DeviceReport(ipAddress);
                 _windowVariables.AddDevice(device);
                 Debug.WriteLine("IP encontrada: " + ipAddress);
-
-                object deviceInfo = device.DeviceInfoReport();
-                //listBox.Items.Add(deviceInfo);
             }
+        }
+        public async Task UpdateCurrentDevices(DeviceReport newDevice)
+        {
+            var deviceToUpdate = _windowVariables.GetDevicesList().Find(oldDevice => oldDevice.deviceId == newDevice.deviceId);
+            if (deviceToUpdate != null)
+            {
+                _windowVariables.UpdateDevice(deviceToUpdate, newDevice);
+            }
+            else
+            {
+                _windowVariables.AddDevice(newDevice);
+            }
+        }
+        public async Task GetCurrentDeviceIP()
+        {
+            var currentIPs = await Dns.GetHostAddressesAsync(Dns.GetHostName());
+            _windowVariables.SetCurrentIp(currentIPs[currentIPs.Length - 1].ToString());
+            Debug.WriteLine("My IP: " + _windowVariables.GetCurrentIp());
         }
     }
 }
