@@ -1,14 +1,25 @@
-﻿using System;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EasyConnect.Models
 {
     public class WindowVariables
     {
-        public List<DeviceReport> _devicesList = new List<DeviceReport>();
+        public struct VariablesSnapShotStructure
+        {
+            //DESKTOP/SERVER
+            public string _currentIp;
+            public string _serverIp;
+            public string _serverPort;
+            public string _bundle;
+            //DEVICES
+            public string _headsetCode;
+            public string _headsetIp;
+            public string _headsetPort;
+            public bool _newDevice;
+        }
+
+        private readonly ConcurrentDictionary<string, DeviceReport> _devices = new ConcurrentDictionary<string, DeviceReport>();
 
         //DESKTOP/SERVER
         public string _currentIp;
@@ -21,13 +32,28 @@ namespace EasyConnect.Models
         public string _headsetPort;
         public bool _newDevice = false;
 
+
+        public VariablesSnapShotStructure SnapShot()
+        {
+            return new VariablesSnapShotStructure
+            {
+                _currentIp = GetCurrentIp(),
+                _serverIp = GetServerIp(),
+                _serverPort = GetServerPort(),
+                _bundle = GetBundleId(),
+                _headsetPort = GetHeadsetPort(),
+                _headsetIp = GetHeadsetIp(),
+                _newDevice = GetNewDeviceCheck(),
+                _headsetCode = GetHeadsetCode()
+            };
+        }
         // GET DESKTOP/SERVER
         public string GetCurrentIp() { return _currentIp; }
         public string GetServerIp() { return _serverIp; }
         public string GetServerPort() { return _serverPort; }
         public string GetBundleId() { return _bundle; }
         // GET DEVICES
-        public List<DeviceReport> GetDevicesList() {  return _devicesList; }
+        public ConcurrentDictionary<string, DeviceReport> GetDevicesList() {  return _devices; }
         // GET HEADSET
         public string GetHeadsetCode() { return _headsetCode; }
         public string GetHeadsetIp() {return _headsetIp; }
@@ -43,15 +69,14 @@ namespace EasyConnect.Models
         public void SetBundleId(string bundle) { _bundle = bundle; }
         // SET DEVICES
         public void AddDevice(DeviceReport device) {
-            var newDevice = _devicesList.Find(d => d.deviceId == device.deviceId);
-            if (newDevice == null)
-                _devicesList.Add(device); 
+            _devices.TryAdd(device.deviceId, device);
         }
-        public void UpdateDevice(DeviceReport oldDevice, DeviceReport newDevice) { 
-            if (_devicesList.Contains(oldDevice))
-                _devicesList.Remove(oldDevice); 
-            _devicesList.Add(newDevice); }
-        public void RemoveDevice(DeviceReport device) { _devicesList.Remove(device); }
+        public void UpdateDevice(DeviceReport oldDevice, DeviceReport newDevice)
+        {
+            if (oldDevice == null || !_devices.TryUpdate(oldDevice.deviceId, newDevice, newDevice))
+                _devices.TryAdd(newDevice.deviceId, newDevice);
+        }
+        public void RemoveDevice(DeviceReport device) { _devices.TryRemove(device.deviceId, out _); }
         //SET HEADSET
         public void SetHeadsetCode(string codeHeadset) { _headsetCode = codeHeadset; }
         public void SetHeadsetIp(string ipHeadset) { _headsetIp = ipHeadset; }

@@ -9,11 +9,7 @@ namespace EasyConnect.Services
 {
     public class ConsoleService
     {
-        public async Task<(int ExitCode, string Output)> PingAsync(string arguments)
-        {
-            return await RunCommandAsync("ping", $"-n 1 {arguments}");
-        }
-        public async Task<(int ExitCode, string Output)> RunAdbAsync(string arguments)
+        public async Task<(int ExitCode, string Output)> RunSingleAdbCommandAsync(string arguments)
         {
             return await RunCommandAsync("adb", arguments); 
         }
@@ -37,7 +33,6 @@ namespace EasyConnect.Services
                     var errorTask = process.StandardError.ReadToEndAsync();
 
                     await Task.WhenAll(outputTask, errorTask);
-                    //await process.WaitForExitAsync();
 
                     string combined = outputTask.Result + errorTask.Result;
 
@@ -47,7 +42,7 @@ namespace EasyConnect.Services
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                return (1, "ERROR");
+                return (-1, "ERROR");
             }
 
         }

@@ -1,15 +1,12 @@
 ﻿using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace EasyConnect.Controllers
 {
@@ -17,13 +14,13 @@ namespace EasyConnect.Controllers
     {
         private readonly AdbService _AdbService;
         private readonly InfoController _InfoController;
-        private WindowVariables _WindowVariables;
+        private readonly NetworkService _NetworkServices;
         private HttpListener _HttpListener;
 
-        public HttpController(AdbService adbService, WindowVariables windowVariables, InfoController infoController)
+        public HttpController(AdbService adbService, NetworkService networkService, InfoController infoController)
         {
             _AdbService = adbService;
-            _WindowVariables = windowVariables;
+            _NetworkServices = networkService;
             _InfoController = infoController;
         }
 
@@ -32,14 +29,14 @@ namespace EasyConnect.Controllers
         {
             _ = StartServerListener();
             var fileNames = await GetFileNameFromServer();
-            _WindowVariables.SetBundleId(fileNames.bundleID);
+            _NetworkServices.SetBundleId(fileNames.bundle);
             return fileNames;
         }
         private async Task<Manifest> GetFileNameFromServer()
         {
             Manifest files = new Manifest();
-            var ipServer = _WindowVariables.GetServerIp();
-            var portServer = _WindowVariables.GetServerPort();
+            var ipServer = _NetworkServices.GetServerIp();
+            var portServer = _NetworkServices.GetServerPort();
             string url = $"http://{ipServer}:{portServer}/manifest.json";
 
             using (HttpClient client = new HttpClient())
@@ -91,7 +88,7 @@ namespace EasyConnect.Controllers
 
                         // Parsear JSON
                         var deviceReport = JsonSerializer.Deserialize<DeviceReport>(body);
-                        _ = _InfoController.UpdateCurrentDevices(deviceReport);
+                        _AdbService.UpdateDevice(deviceReport);
 
                         context.Response.StatusCode = 200;
                     }

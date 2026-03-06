@@ -1,56 +1,74 @@
-﻿using EasyConnect.Models;
-using EasyConnect.Services;
-using System;
-using System.Collections.Generic;
+﻿using EasyConnect.Services;
 using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Net;
+using System;
+using System.Linq;
 
 namespace EasyConnect.Controllers
 {
     public class DeployController
     {
+        public event Func<object, EventArgs, Task> DeviceConnectedEvent;
         private readonly AdbService _adbService;
-        private readonly ConsoleService _consoleService;
-        private WindowVariables _windowVariables;
+        private readonly NetworkService _networkService;
+        private readonly WebSocketService _websocketService;
 
-        public DeployController(ConsoleService consoleService, AdbService adbService, WindowVariables windowVariables)
+        public DeployController(
+            AdbService adbService,  
+            NetworkService networkService,
+            WebSocketService websocketService)
         {
             _adbService = adbService;
-            _consoleService = consoleService;
-            _windowVariables = windowVariables;
+            _networkService = networkService;
+            _websocketService = websocketService;
         }
-        public async Task StartDeployAsync(string arguments)
+        protected virtual async Task OnDeviceConnectedEvent()
         {
-            await _consoleService.RunCommandAsync("adb", arguments);
+            if (DeviceConnectedEvent == null) return;
+
+            var handlers = DeviceConnectedEvent.GetInvocationList()
+                                           .Cast<Func<object, EventArgs, Task>>();
+
+            foreach (var handler in handlers)
+            {
+                await handler(this, EventArgs.Empty);
+            }
         }
         public async Task StartInstaller()
         {
             await _adbService.AdbInstall();
         }
-        public async Task StartHeadsetConnection()
+        public async Task StartManualHeadsetConnection()
         {
-            string ipHeadset = _windowVariables.GetHeadsetIp();
-            string portHeadset = _windowVariables.GetHeadsetPort();
-            string codeHeadset = _windowVariables.GetHeadsetCode();
-
-            bool newDevice = _windowVariables.GetNewDeviceCheck();
-            if (newDevice)
+            var (ExitCode, Output) = await Task.Run(async () =>
             {
-                var (ExceptionCode, Output) = await _adbService.AdbPair(ipHeadset, portHeadset, codeHeadset);
-                Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
-                    $"Output: {Output}");
+                if (_adbService.GetNewDeviceCheck())
+                    return await _adbService.AdbPair();
+                return await _adbService.AdbConnection();
+            });
+            Debug.WriteLine($"Exception Code: {ExitCode}\n" +
+                $"Output: {Output}");
+            await OnDeviceConnectedEvent();
+        }
+        public async Task StartAutoHeadsetConnection()
+        {
+            var headsets = await _networkService.StartAutoConnectionAsync();
+            if (headsets.Length > 0)
+            {
+                foreach (var headset in headsets)
+                {
+                    _adbService.SetHeadsetIp(headset.ToString());
+                    var (ExceptionCode, Output) = await _adbService.AdbConnection();
+                    Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
+                        $"Output: {Output}");
+                }
+                await OnDeviceConnectedEvent();
+                _adbService.SetHeadsetIp("");
             }
             else
             {
-                var (ExceptionCode, Output) = await _adbService.AdbConnection(ipHeadset, portHeadset);
-                Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
-                    $"Output: {Output}");
+                Debug.WriteLine("No devices found, try again.");
             }
         }
     }

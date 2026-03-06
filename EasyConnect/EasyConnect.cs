@@ -2,8 +2,8 @@
 using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -11,87 +11,90 @@ namespace EasyConnect
 {
     public partial class WINDOW : Form
     {
-        private DeployController _DeployController;
-        private InfoController _InfoController;
-        private HttpController _HttpController;
+        private readonly AppInitializer _initializer;
+        private readonly WebSocketService _WebSocketService;
+        private readonly DeployController _DeployController;
+        private readonly InfoController _InfoController;
+        private readonly HttpController _HttpController;
 
-        private WindowVariables _WindowVariables;
-        private AdbService _AdbService;
-        private ConsoleService _ConsoleService;
-        private NetworkService _NetworkService;
-        public WINDOW()
+        private readonly AdbService _AdbService;
+        private readonly NetworkService _NetworkService;
+        public WINDOW(
+            NetworkService _NetworkService, WebSocketService _WebSocketService, 
+            AdbService _AdbService, DeployController _DeployController, 
+            InfoController _InfoController, HttpController _HttpController,
+            AppInitializer _initializer
+            )
         {
             InitializeComponent();
-            _ = InitializeAsync();
-        }
-        public async Task InitializeAsync()
-        {
-            _NetworkService = new NetworkService();
-            _WindowVariables = new WindowVariables();
-
-            _ConsoleService = new ConsoleService();
-            _AdbService = new AdbService(_ConsoleService, _WindowVariables);
-
-            _DeployController = new DeployController(_ConsoleService, _AdbService, _WindowVariables);
-            _InfoController = new InfoController(_ConsoleService, _AdbService, _WindowVariables);
-            _HttpController = new HttpController(_AdbService, _WindowVariables, _InfoController);
-
-            await _InfoController.StartDevicesInfo();
-            await updateOwnIp();
-            await updateDevices();
-            var list = await _NetworkService.ConnectAsync(_ConsoleService);
-            foreach (var device in list)
-            {
-                Debug.WriteLine(device);
-            }
+            this._NetworkService = _NetworkService;
+            this._WebSocketService = _WebSocketService;
+            this._AdbService = _AdbService;
+            this._DeployController = _DeployController;
+            this._InfoController = _InfoController;
+            this._HttpController = _HttpController;
+            this._initializer = _initializer;
         }
         private async Task updateDevices()
         {
             listBoxDEVICES.Items.Clear();
-            var devices = _WindowVariables.GetDevicesList();
+            var devices = _AdbService.GetDevicesList();
             foreach (var device in devices)
             {
-                listBoxDEVICES.Items.Add(device.DeviceInfoReport());
+                listBoxDEVICES.Items.Add(device.Value.DeviceInfoReport());
             }
         }
         private async Task updateOwnIp()
         {
-            var ip = _WindowVariables.GetCurrentIp();
+            var ip = await _NetworkService.GetCurrentIp();
             if (ip == null)
                 labelIPDEVICE.Text = "null";
-            labelIPDEVICE.Text = ip;
+            labelIPDEVICE.Text = ip.FirstOrDefault().ToString();
         }
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
-
+            _DeployController.DeviceConnectedEvent += async (s, ev) =>
+            {
+                await updateDevices();
+            };
+            _NetworkService.OpenServerEvent += async (s, ev) =>
+            {
+                await updateOwnIp();
+                await updateDevices();
+            };
+            await _initializer.StartAsync();
+        }
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            _WebSocketService.server.Dispose();
+            Debug.WriteLine("CLOSING EVERYTING!!");
+            base.OnFormClosing(e);
         }
         private void textBoxIP_TextChanged(object sender, EventArgs e)
         {
-            _WindowVariables.SetHeadsetIp(textBoxIP.Text);
+            _AdbService.SetHeadsetIp(textBoxIP.Text);
         }
         private void textBoxPORT_TextChanged(object sender, EventArgs e)
         {
-            _WindowVariables.SetHeadsetPort(textBoxPORT.Text);
+            _AdbService.SetHeadsetPort(textBoxPORT.Text);
         }
         private async void buttonCONNECT_Click(object sender, EventArgs e)
         {
-            await _DeployController?.StartHeadsetConnection();
-            await _InfoController?.StartDevicesInfo();
-            await updateDevices();
+            await _DeployController?.StartManualHeadsetConnection();
         }
         private void textBoxSERVERIP_TextChanged(object sender, EventArgs e)
         {
-            _WindowVariables.SetServerIp(textBoxSERVERIP.Text);
+            _NetworkService.SetServerIp(textBoxSERVERIP.Text);
         }
         private void textBoxSERVERPORT_TextChanged(object sender, EventArgs e)
         {
-            _WindowVariables.SetServerPort(textBoxSERVERPORT.Text);
+            _NetworkService.SetServerPort(textBoxSERVERPORT.Text);
         }
         private async void buttonSERVERCONNECTION_Click(object sender, EventArgs e)
         {
             Manifest manifest = await _HttpController?.StartServerConnection();
 
-            var bundle = manifest.bundleID;
+            var bundle = manifest.bundle;
             var files = manifest.files;
 
             labelBUNDLE.Text = bundle;
@@ -105,7 +108,9 @@ namespace EasyConnect
         }
         private async void buttonDOWNLOAD_Click(object sender, EventArgs e)
         {
-            await _AdbService.AdbDownload();
+            var serverIp = _NetworkService.GetServerIp();
+            var serverPort = _NetworkService.GetServerPort();
+            await _AdbService.AdbDownload(serverIp, serverPort);
         }
         private void listBoxDEVICES_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -113,7 +118,8 @@ namespace EasyConnect
         }
         private async void buttonMOVE_Click(object sender, EventArgs e)
         {
-            await _AdbService.AdbMove();
+            var bundle = _NetworkService.GetBundleId();
+            await _AdbService.AdbMove(bundle);
         }
         private async void buttonINSTALL_Click(object sender, EventArgs e)
         {
@@ -123,12 +129,12 @@ namespace EasyConnect
         private void checkBoxNEWDEVICE_CheckedChanged(object sender, EventArgs e)
         {
             textBoxNEWDEVICE.Visible = checkBoxNEWDEVICE.Checked;
-            _WindowVariables.SetNewDeviceCheck(textBoxNEWDEVICE.Visible);
+            _AdbService.SetNewDeviceCheck(textBoxNEWDEVICE.Visible);
         }
 
         private void textBoxNEWDEVICE_TextChanged(object sender, EventArgs e)
         {
-            _WindowVariables.SetHeadsetCode(textBoxNEWDEVICE.Text);
+            _AdbService.SetHeadsetCode(textBoxNEWDEVICE.Text);
         }
 
         private void labelIPDEVICE_Click(object sender, EventArgs e)
@@ -139,6 +145,18 @@ namespace EasyConnect
         private void labelBUNDLE_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private async void buttonAUTOSCANN_Click(object sender, EventArgs e)
+        {
+            await _DeployController?.StartAutoHeadsetConnection();
+            await _InfoController?.StartInfo();
+        }
+
+        private async void buttonWEBSOCKETCONNECTION_Click(object sender, EventArgs e)
+        {
+            var serverIp = _NetworkService.GetServerIp();
+            await _AdbService?.AdbStartWebSocketConnection(serverIp);
         }
     }
 }

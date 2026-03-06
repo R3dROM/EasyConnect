@@ -9,7 +9,7 @@ namespace EasyConnect.Models
     public class Manifest
     {
         public string version {  get; set; }
-        public string bundleID { get; set; }
+        public string bundle { get; set; }
         public List<Files> files {  get; set; }
     }
 
