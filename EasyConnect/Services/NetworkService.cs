@@ -36,17 +36,16 @@ namespace EasyConnect.Services
         }
 
         // GET DESKTOP/SERVER
-        public async Task<IPAddress[]> StartServerNetwork()
+        public async Task StartServerNetwork()
         {
-            myIpAddress = await GetMyIpAddress();
+            _serverIp = myIpAddress.FirstOrDefault().ToString();
             await OnOpenServerEvent();
-            return myIpAddress;
         }
         public async Task<IPAddress[]> GetCurrentIp()  {
             myIpAddress = await GetMyIpAddress();
             return myIpAddress; 
         }
-        public string GetServerIp() { return _serverIp; }
+        public string GetServerIp() { return myIpAddress.FirstOrDefault().ToString(); }
         public string GetServerPort() { return _serverPort; }
         public string GetBundleId() { return _bundle; }
         // SET DESKTOP/SERVER

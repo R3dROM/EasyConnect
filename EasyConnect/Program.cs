@@ -16,13 +16,13 @@ namespace EasyConnect
         static void Main()
         {
             var services = new ServiceCollection();
+            services.AddSingleton<InfoController>();
             services.AddSingleton<AdbService>();
             services.AddSingleton<ConsoleService>();
             services.AddSingleton<NetworkService>();
             services.AddSingleton<WebSocketService>();
             services.AddSingleton<DeployController>();
             services.AddSingleton<HttpController>();
-            services.AddSingleton<InfoController>();
             services.AddSingleton<AppInitializer>();
             services.AddSingleton<WINDOW>();
 

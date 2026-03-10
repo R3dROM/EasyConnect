@@ -91,6 +91,7 @@
     <Compile Include="Models\DeviceReport.cs" />
     <Compile Include="Models\Devices.cs" />
     <Compile Include="Models\Manifest.cs" />
+    <Compile Include="Models\MessageInfo.cs" />
     <Compile Include="Models\WindowVariables.cs" />
     <Compile Include="Services\AdbService.cs" />
     <Compile Include="Services\AppInitializer.cs" />

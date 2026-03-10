@@ -65,9 +65,10 @@
             // 
             this.Title.AutoSize = true;
             this.Title.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title.Location = new System.Drawing.Point(140, 9);
+            this.Title.Location = new System.Drawing.Point(105, 7);
+            this.Title.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Title.Name = "Title";
-            this.Title.Size = new System.Drawing.Size(204, 20);
+            this.Title.Size = new System.Drawing.Size(172, 16);
             this.Title.TabIndex = 0;
             this.Title.Text = "EASY CONNECTION";
             // 
@@ -81,20 +82,21 @@
             this.groupIPConnect.Controls.Add(this.textBoxIP);
             this.groupIPConnect.Controls.Add(this.labelPort);
             this.groupIPConnect.Controls.Add(this.labelIP);
-            this.groupIPConnect.Location = new System.Drawing.Point(12, 64);
-            this.groupIPConnect.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.groupIPConnect.Location = new System.Drawing.Point(9, 52);
+            this.groupIPConnect.Margin = new System.Windows.Forms.Padding(2);
             this.groupIPConnect.Name = "groupIPConnect";
-            this.groupIPConnect.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.groupIPConnect.Size = new System.Drawing.Size(441, 193);
+            this.groupIPConnect.Padding = new System.Windows.Forms.Padding(2);
+            this.groupIPConnect.Size = new System.Drawing.Size(331, 157);
             this.groupIPConnect.TabIndex = 1;
             this.groupIPConnect.TabStop = false;
             this.groupIPConnect.Text = "IP Connection";
             // 
             // buttonAUTOSCANN
             // 
-            this.buttonAUTOSCANN.Location = new System.Drawing.Point(245, 152);
+            this.buttonAUTOSCANN.Location = new System.Drawing.Point(184, 124);
+            this.buttonAUTOSCANN.Margin = new System.Windows.Forms.Padding(2);
             this.buttonAUTOSCANN.Name = "buttonAUTOSCANN";
-            this.buttonAUTOSCANN.Size = new System.Drawing.Size(137, 23);
+            this.buttonAUTOSCANN.Size = new System.Drawing.Size(103, 19);
             this.buttonAUTOSCANN.TabIndex = 12;
             this.buttonAUTOSCANN.Text = "AUTO SCANN";
             this.buttonAUTOSCANN.UseVisualStyleBackColor = true;
@@ -102,10 +104,9 @@
             // 
             // textBoxNEWDEVICE
             // 
-            this.textBoxNEWDEVICE.Location = new System.Drawing.Point(160, 106);
-            this.textBoxNEWDEVICE.Margin = new System.Windows.Forms.Padding(4);
+            this.textBoxNEWDEVICE.Location = new System.Drawing.Point(120, 86);
             this.textBoxNEWDEVICE.Name = "textBoxNEWDEVICE";
-            this.textBoxNEWDEVICE.Size = new System.Drawing.Size(132, 22);
+            this.textBoxNEWDEVICE.Size = new System.Drawing.Size(100, 20);
             this.textBoxNEWDEVICE.TabIndex = 7;
             this.textBoxNEWDEVICE.Visible = false;
             this.textBoxNEWDEVICE.TextChanged += new System.EventHandler(this.textBoxNEWDEVICE_TextChanged);
@@ -113,10 +114,9 @@
             // checkBoxNEWDEVICE
             // 
             this.checkBoxNEWDEVICE.AutoSize = true;
-            this.checkBoxNEWDEVICE.Location = new System.Drawing.Point(27, 110);
-            this.checkBoxNEWDEVICE.Margin = new System.Windows.Forms.Padding(4);
+            this.checkBoxNEWDEVICE.Location = new System.Drawing.Point(20, 89);
             this.checkBoxNEWDEVICE.Name = "checkBoxNEWDEVICE";
-            this.checkBoxNEWDEVICE.Size = new System.Drawing.Size(113, 20);
+            this.checkBoxNEWDEVICE.Size = new System.Drawing.Size(94, 17);
             this.checkBoxNEWDEVICE.TabIndex = 6;
             this.checkBoxNEWDEVICE.Text = "NEW DEVICE";
             this.checkBoxNEWDEVICE.UseVisualStyleBackColor = true;
@@ -124,10 +124,10 @@
             // 
             // buttonCONNECT
             // 
-            this.buttonCONNECT.Location = new System.Drawing.Point(85, 151);
-            this.buttonCONNECT.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.buttonCONNECT.Location = new System.Drawing.Point(64, 123);
+            this.buttonCONNECT.Margin = new System.Windows.Forms.Padding(2);
             this.buttonCONNECT.Name = "buttonCONNECT";
-            this.buttonCONNECT.Size = new System.Drawing.Size(109, 25);
+            this.buttonCONNECT.Size = new System.Drawing.Size(82, 20);
             this.buttonCONNECT.TabIndex = 4;
             this.buttonCONNECT.Text = "CONNECT";
             this.buttonCONNECT.UseVisualStyleBackColor = true;
@@ -135,10 +135,10 @@
             // 
             // textBoxPORT
             // 
-            this.textBoxPORT.Location = new System.Drawing.Point(160, 63);
-            this.textBoxPORT.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.textBoxPORT.Location = new System.Drawing.Point(120, 51);
+            this.textBoxPORT.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxPORT.Name = "textBoxPORT";
-            this.textBoxPORT.Size = new System.Drawing.Size(100, 22);
+            this.textBoxPORT.Size = new System.Drawing.Size(76, 20);
             this.textBoxPORT.TabIndex = 3;
             this.textBoxPORT.Text = "5555";
             this.textBoxPORT.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
@@ -146,28 +146,30 @@
             // 
             // textBoxIP
             // 
-            this.textBoxIP.Location = new System.Drawing.Point(160, 26);
-            this.textBoxIP.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.textBoxIP.Location = new System.Drawing.Point(120, 21);
+            this.textBoxIP.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxIP.Name = "textBoxIP";
-            this.textBoxIP.Size = new System.Drawing.Size(151, 22);
+            this.textBoxIP.Size = new System.Drawing.Size(114, 20);
             this.textBoxIP.TabIndex = 2;
             this.textBoxIP.TextChanged += new System.EventHandler(this.textBoxIP_TextChanged);
             // 
             // labelPort
             // 
             this.labelPort.AutoSize = true;
-            this.labelPort.Location = new System.Drawing.Point(91, 69);
+            this.labelPort.Location = new System.Drawing.Point(68, 56);
+            this.labelPort.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelPort.Name = "labelPort";
-            this.labelPort.Size = new System.Drawing.Size(48, 16);
+            this.labelPort.Size = new System.Drawing.Size(40, 13);
             this.labelPort.TabIndex = 1;
             this.labelPort.Text = "PORT:";
             // 
             // labelIP
             // 
             this.labelIP.AutoSize = true;
-            this.labelIP.Location = new System.Drawing.Point(117, 32);
+            this.labelIP.Location = new System.Drawing.Point(88, 26);
+            this.labelIP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelIP.Name = "labelIP";
-            this.labelIP.Size = new System.Drawing.Size(22, 16);
+            this.labelIP.Size = new System.Drawing.Size(20, 13);
             this.labelIP.TabIndex = 0;
             this.labelIP.Text = "IP:";
             // 
@@ -181,21 +183,21 @@
             this.groupBoxSERVER.Controls.Add(this.textBoxSERVERIP);
             this.groupBoxSERVER.Controls.Add(this.labelSERVERPORT);
             this.groupBoxSERVER.Controls.Add(this.labelSERVERIP);
-            this.groupBoxSERVER.Location = new System.Drawing.Point(12, 262);
-            this.groupBoxSERVER.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.groupBoxSERVER.Location = new System.Drawing.Point(9, 213);
+            this.groupBoxSERVER.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxSERVER.Name = "groupBoxSERVER";
-            this.groupBoxSERVER.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.groupBoxSERVER.Size = new System.Drawing.Size(441, 321);
+            this.groupBoxSERVER.Padding = new System.Windows.Forms.Padding(2);
+            this.groupBoxSERVER.Size = new System.Drawing.Size(331, 261);
             this.groupBoxSERVER.TabIndex = 2;
             this.groupBoxSERVER.TabStop = false;
             this.groupBoxSERVER.Text = "SERVER Connection";
             // 
             // buttonINSTALL
             // 
-            this.buttonINSTALL.Location = new System.Drawing.Point(267, 174);
-            this.buttonINSTALL.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.buttonINSTALL.Location = new System.Drawing.Point(200, 141);
+            this.buttonINSTALL.Margin = new System.Windows.Forms.Padding(2);
             this.buttonINSTALL.Name = "buttonINSTALL";
-            this.buttonINSTALL.Size = new System.Drawing.Size(91, 23);
+            this.buttonINSTALL.Size = new System.Drawing.Size(68, 19);
             this.buttonINSTALL.TabIndex = 9;
             this.buttonINSTALL.Text = "INSTALL";
             this.buttonINSTALL.UseVisualStyleBackColor = true;
@@ -203,10 +205,10 @@
             // 
             // buttonMOVE
             // 
-            this.buttonMOVE.Location = new System.Drawing.Point(171, 174);
-            this.buttonMOVE.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.buttonMOVE.Location = new System.Drawing.Point(128, 141);
+            this.buttonMOVE.Margin = new System.Windows.Forms.Padding(2);
             this.buttonMOVE.Name = "buttonMOVE";
-            this.buttonMOVE.Size = new System.Drawing.Size(75, 23);
+            this.buttonMOVE.Size = new System.Drawing.Size(56, 19);
             this.buttonMOVE.TabIndex = 8;
             this.buttonMOVE.Text = "MOVE";
             this.buttonMOVE.UseVisualStyleBackColor = true;
@@ -214,10 +216,10 @@
             // 
             // buttonDOWNLOAD
             // 
-            this.buttonDOWNLOAD.Location = new System.Drawing.Point(43, 174);
-            this.buttonDOWNLOAD.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.buttonDOWNLOAD.Location = new System.Drawing.Point(32, 141);
+            this.buttonDOWNLOAD.Margin = new System.Windows.Forms.Padding(2);
             this.buttonDOWNLOAD.Name = "buttonDOWNLOAD";
-            this.buttonDOWNLOAD.Size = new System.Drawing.Size(109, 23);
+            this.buttonDOWNLOAD.Size = new System.Drawing.Size(82, 19);
             this.buttonDOWNLOAD.TabIndex = 7;
             this.buttonDOWNLOAD.Text = "DOWNLOAD";
             this.buttonDOWNLOAD.UseVisualStyleBackColor = true;
@@ -225,10 +227,10 @@
             // 
             // buttonSERVERCONNECTION
             // 
-            this.buttonSERVERCONNECTION.Location = new System.Drawing.Point(160, 110);
-            this.buttonSERVERCONNECTION.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.buttonSERVERCONNECTION.Location = new System.Drawing.Point(120, 89);
+            this.buttonSERVERCONNECTION.Margin = new System.Windows.Forms.Padding(2);
             this.buttonSERVERCONNECTION.Name = "buttonSERVERCONNECTION";
-            this.buttonSERVERCONNECTION.Size = new System.Drawing.Size(109, 25);
+            this.buttonSERVERCONNECTION.Size = new System.Drawing.Size(82, 20);
             this.buttonSERVERCONNECTION.TabIndex = 4;
             this.buttonSERVERCONNECTION.Text = "CONNECT";
             this.buttonSERVERCONNECTION.UseVisualStyleBackColor = true;
@@ -236,46 +238,49 @@
             // 
             // textBoxSERVERPORT
             // 
-            this.textBoxSERVERPORT.Location = new System.Drawing.Point(160, 57);
-            this.textBoxSERVERPORT.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.textBoxSERVERPORT.Location = new System.Drawing.Point(120, 46);
+            this.textBoxSERVERPORT.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxSERVERPORT.Name = "textBoxSERVERPORT";
-            this.textBoxSERVERPORT.Size = new System.Drawing.Size(100, 22);
+            this.textBoxSERVERPORT.Size = new System.Drawing.Size(76, 20);
             this.textBoxSERVERPORT.TabIndex = 3;
             this.textBoxSERVERPORT.TextChanged += new System.EventHandler(this.textBoxSERVERPORT_TextChanged);
             // 
             // textBoxSERVERIP
             // 
-            this.textBoxSERVERIP.Location = new System.Drawing.Point(160, 18);
-            this.textBoxSERVERIP.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.textBoxSERVERIP.Location = new System.Drawing.Point(120, 15);
+            this.textBoxSERVERIP.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxSERVERIP.Name = "textBoxSERVERIP";
-            this.textBoxSERVERIP.Size = new System.Drawing.Size(151, 22);
+            this.textBoxSERVERIP.Size = new System.Drawing.Size(114, 20);
             this.textBoxSERVERIP.TabIndex = 2;
             this.textBoxSERVERIP.TextChanged += new System.EventHandler(this.textBoxSERVERIP_TextChanged);
             // 
             // labelSERVERPORT
             // 
             this.labelSERVERPORT.AutoSize = true;
-            this.labelSERVERPORT.Location = new System.Drawing.Point(93, 57);
+            this.labelSERVERPORT.Location = new System.Drawing.Point(70, 46);
+            this.labelSERVERPORT.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelSERVERPORT.Name = "labelSERVERPORT";
-            this.labelSERVERPORT.Size = new System.Drawing.Size(48, 16);
+            this.labelSERVERPORT.Size = new System.Drawing.Size(40, 13);
             this.labelSERVERPORT.TabIndex = 1;
             this.labelSERVERPORT.Text = "PORT:";
             // 
             // labelSERVERIP
             // 
             this.labelSERVERIP.AutoSize = true;
-            this.labelSERVERIP.Location = new System.Drawing.Point(117, 18);
+            this.labelSERVERIP.Location = new System.Drawing.Point(88, 15);
+            this.labelSERVERIP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelSERVERIP.Name = "labelSERVERIP";
-            this.labelSERVERIP.Size = new System.Drawing.Size(22, 16);
+            this.labelSERVERIP.Size = new System.Drawing.Size(20, 13);
             this.labelSERVERIP.TabIndex = 0;
             this.labelSERVERIP.Text = "IP:";
             // 
             // labelBUNDLEID
             // 
             this.labelBUNDLEID.AutoSize = true;
-            this.labelBUNDLEID.Location = new System.Drawing.Point(515, 394);
+            this.labelBUNDLEID.Location = new System.Drawing.Point(377, 429);
+            this.labelBUNDLEID.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelBUNDLEID.Name = "labelBUNDLEID";
-            this.labelBUNDLEID.Size = new System.Drawing.Size(81, 16);
+            this.labelBUNDLEID.Size = new System.Drawing.Size(68, 13);
             this.labelBUNDLEID.TabIndex = 10;
             this.labelBUNDLEID.Text = "BUNDLE ID:";
             this.labelBUNDLEID.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
@@ -285,11 +290,10 @@
             this.listBoxFILENAMES.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.listBoxFILENAMES.FormattingEnabled = true;
             this.listBoxFILENAMES.HorizontalScrollbar = true;
-            this.listBoxFILENAMES.ItemHeight = 16;
-            this.listBoxFILENAMES.Location = new System.Drawing.Point(519, 277);
-            this.listBoxFILENAMES.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.listBoxFILENAMES.Location = new System.Drawing.Point(380, 277);
+            this.listBoxFILENAMES.Margin = new System.Windows.Forms.Padding(2);
             this.listBoxFILENAMES.Name = "listBoxFILENAMES";
-            this.listBoxFILENAMES.Size = new System.Drawing.Size(408, 100);
+            this.listBoxFILENAMES.Size = new System.Drawing.Size(458, 147);
             this.listBoxFILENAMES.TabIndex = 6;
             this.listBoxFILENAMES.SelectedIndexChanged += new System.EventHandler(this.listBoxFILENAMES_SelectedIndexChanged);
             // 
@@ -297,27 +301,30 @@
             // 
             this.labelFILENAME.AutoSize = true;
             this.labelFILENAME.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelFILENAME.Location = new System.Drawing.Point(677, 245);
+            this.labelFILENAME.Location = new System.Drawing.Point(383, 256);
+            this.labelFILENAME.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelFILENAME.Name = "labelFILENAME";
-            this.labelFILENAME.Size = new System.Drawing.Size(74, 20);
+            this.labelFILENAME.Size = new System.Drawing.Size(62, 16);
             this.labelFILENAME.TabIndex = 5;
             this.labelFILENAME.Text = "FILES";
             // 
             // labelCURRENTIP
             // 
             this.labelCURRENTIP.AutoSize = true;
-            this.labelCURRENTIP.Location = new System.Drawing.Point(88, 42);
+            this.labelCURRENTIP.Location = new System.Drawing.Point(66, 34);
+            this.labelCURRENTIP.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelCURRENTIP.Name = "labelCURRENTIP";
-            this.labelCURRENTIP.Size = new System.Drawing.Size(92, 16);
+            this.labelCURRENTIP.Size = new System.Drawing.Size(76, 13);
             this.labelCURRENTIP.TabIndex = 3;
             this.labelCURRENTIP.Text = "CURRENT IP:";
             // 
             // labelIPDEVICE
             // 
             this.labelIPDEVICE.AutoSize = true;
-            this.labelIPDEVICE.Location = new System.Drawing.Point(187, 42);
+            this.labelIPDEVICE.Location = new System.Drawing.Point(140, 34);
+            this.labelIPDEVICE.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelIPDEVICE.Name = "labelIPDEVICE";
-            this.labelIPDEVICE.Size = new System.Drawing.Size(31, 16);
+            this.labelIPDEVICE.Size = new System.Drawing.Size(25, 13);
             this.labelIPDEVICE.TabIndex = 4;
             this.labelIPDEVICE.Text = "aaa";
             this.labelIPDEVICE.Click += new System.EventHandler(this.labelIPDEVICE_Click);
@@ -325,53 +332,52 @@
             // groupBoxDEVICES
             // 
             this.groupBoxDEVICES.Controls.Add(this.listBoxDEVICES);
-            this.groupBoxDEVICES.Location = new System.Drawing.Point(501, 64);
-            this.groupBoxDEVICES.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.groupBoxDEVICES.Location = new System.Drawing.Point(376, 52);
+            this.groupBoxDEVICES.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxDEVICES.Name = "groupBoxDEVICES";
-            this.groupBoxDEVICES.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.groupBoxDEVICES.Size = new System.Drawing.Size(431, 150);
+            this.groupBoxDEVICES.Padding = new System.Windows.Forms.Padding(2);
+            this.groupBoxDEVICES.Size = new System.Drawing.Size(462, 166);
             this.groupBoxDEVICES.TabIndex = 5;
             this.groupBoxDEVICES.TabStop = false;
             this.groupBoxDEVICES.Text = "DEVICES";
             // 
             // listBoxDEVICES
             // 
-            this.listBoxDEVICES.Enabled = false;
             this.listBoxDEVICES.FormattingEnabled = true;
-            this.listBoxDEVICES.ItemHeight = 16;
-            this.listBoxDEVICES.Location = new System.Drawing.Point(5, 26);
-            this.listBoxDEVICES.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.listBoxDEVICES.HorizontalScrollbar = true;
+            this.listBoxDEVICES.Location = new System.Drawing.Point(4, 21);
+            this.listBoxDEVICES.Margin = new System.Windows.Forms.Padding(2);
             this.listBoxDEVICES.Name = "listBoxDEVICES";
-            this.listBoxDEVICES.Size = new System.Drawing.Size(419, 116);
+            this.listBoxDEVICES.Size = new System.Drawing.Size(454, 134);
             this.listBoxDEVICES.TabIndex = 0;
             this.listBoxDEVICES.SelectedIndexChanged += new System.EventHandler(this.listBoxDEVICES_SelectedIndexChanged);
             // 
             // labelBUNDLE
             // 
             this.labelBUNDLE.AutoSize = true;
-            this.labelBUNDLE.Location = new System.Drawing.Point(613, 393);
-            this.labelBUNDLE.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.labelBUNDLE.Location = new System.Drawing.Point(451, 428);
             this.labelBUNDLE.Name = "labelBUNDLE";
-            this.labelBUNDLE.Size = new System.Drawing.Size(91, 16);
+            this.labelBUNDLE.Size = new System.Drawing.Size(72, 13);
             this.labelBUNDLE.TabIndex = 11;
             this.labelBUNDLE.Text = "com.exam.ple";
             this.labelBUNDLE.Click += new System.EventHandler(this.labelBUNDLE_Click);
             // 
             // buttonWEBSOCKETCONNECTION
             // 
-            this.buttonWEBSOCKETCONNECTION.Location = new System.Drawing.Point(616, 211);
+            this.buttonWEBSOCKETCONNECTION.Location = new System.Drawing.Point(544, 222);
+            this.buttonWEBSOCKETCONNECTION.Margin = new System.Windows.Forms.Padding(2);
             this.buttonWEBSOCKETCONNECTION.Name = "buttonWEBSOCKETCONNECTION";
-            this.buttonWEBSOCKETCONNECTION.Size = new System.Drawing.Size(193, 23);
+            this.buttonWEBSOCKETCONNECTION.Size = new System.Drawing.Size(145, 19);
             this.buttonWEBSOCKETCONNECTION.TabIndex = 12;
-            this.buttonWEBSOCKETCONNECTION.Text = "START WEB SOCKET";
+            this.buttonWEBSOCKETCONNECTION.Text = "STOP WEB SOCKET";
             this.buttonWEBSOCKETCONNECTION.UseVisualStyleBackColor = true;
             this.buttonWEBSOCKETCONNECTION.Click += new System.EventHandler(this.buttonWEBSOCKETCONNECTION_Click);
             // 
             // WINDOW
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1171, 597);
+            this.ClientSize = new System.Drawing.Size(878, 485);
             this.Controls.Add(this.buttonWEBSOCKETCONNECTION);
             this.Controls.Add(this.labelBUNDLE);
             this.Controls.Add(this.labelBUNDLEID);
@@ -384,7 +390,7 @@
             this.Controls.Add(this.groupIPConnect);
             this.Controls.Add(this.Title);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "WINDOW";
             this.Text = "EASY CONNECTION";
             this.Load += new System.EventHandler(this.Form1_Load);

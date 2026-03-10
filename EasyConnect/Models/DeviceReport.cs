@@ -19,13 +19,15 @@ namespace EasyConnect.Models
         }
         public string deviceId { get; set; }
         public string bundle { get; set; }
-        public bool downloadStatus { get; set; } = false;
-        public bool installStatus { get; set; } = false;
+        public string downloadStatus { get; set; } = "waiting";
+        public string installStatus { get; set; } = "waiting";
+        public string currentFile { get; set; } = "-";
+        public long percent { get; set; }
         public string apkPath { get; set; }
         public string apkName { get; set; }
         public long apkSize { get; set; }
         public long timestamp { get; set; }
 
-        public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t{installStatus}"; }
+        public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t{currentFile} - {percent}%"; }
     }
 }

@@ -9,7 +9,6 @@ namespace EasyConnect.Controllers
 {
     public class DeployController
     {
-        public event Func<object, EventArgs, Task> DeviceConnectedEvent;
         private readonly AdbService _adbService;
         private readonly NetworkService _networkService;
         private readonly WebSocketService _websocketService;
@@ -22,18 +21,6 @@ namespace EasyConnect.Controllers
             _adbService = adbService;
             _networkService = networkService;
             _websocketService = websocketService;
-        }
-        protected virtual async Task OnDeviceConnectedEvent()
-        {
-            if (DeviceConnectedEvent == null) return;
-
-            var handlers = DeviceConnectedEvent.GetInvocationList()
-                                           .Cast<Func<object, EventArgs, Task>>();
-
-            foreach (var handler in handlers)
-            {
-                await handler(this, EventArgs.Empty);
-            }
         }
         public async Task StartInstaller()
         {
@@ -49,7 +36,6 @@ namespace EasyConnect.Controllers
             });
             Debug.WriteLine($"Exception Code: {ExitCode}\n" +
                 $"Output: {Output}");
-            await OnDeviceConnectedEvent();
         }
         public async Task StartAutoHeadsetConnection()
         {
@@ -63,7 +49,6 @@ namespace EasyConnect.Controllers
                     Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
                         $"Output: {Output}");
                 }
-                await OnDeviceConnectedEvent();
                 _adbService.SetHeadsetIp("");
             }
             else

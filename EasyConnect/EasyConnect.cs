@@ -12,11 +12,11 @@ namespace EasyConnect
     public partial class WINDOW : Form
     {
         private readonly AppInitializer _initializer;
-        private readonly WebSocketService _WebSocketService;
         private readonly DeployController _DeployController;
         private readonly InfoController _InfoController;
         private readonly HttpController _HttpController;
 
+        private readonly WebSocketService _WebSocketService;
         private readonly AdbService _AdbService;
         private readonly NetworkService _NetworkService;
         public WINDOW(
@@ -35,34 +35,38 @@ namespace EasyConnect
             this._HttpController = _HttpController;
             this._initializer = _initializer;
         }
-        private async Task updateDevices()
+        private void updateDevices()
         {
-            listBoxDEVICES.Items.Clear();
-            var devices = _AdbService.GetDevicesList();
-            foreach (var device in devices)
+            if (listBoxDEVICES.InvokeRequired)
             {
-                listBoxDEVICES.Items.Add(device.Value.DeviceInfoReport());
+                listBoxDEVICES.Invoke(new Action(updateDevices));
+            }
+            else
+            {
+                listBoxDEVICES.Items.Clear();
+                var devices = _AdbService.GetDevicesList();
+                foreach (var device in devices)
+                {
+                    listBoxDEVICES.Items.Add(device.Value.DeviceInfoReport());
+                }
             }
         }
-        private async Task updateOwnIp()
+        private void updateOwnIp(string serverIp)
         {
-            var ip = await _NetworkService.GetCurrentIp();
-            if (ip == null)
-                labelIPDEVICE.Text = "null";
-            labelIPDEVICE.Text = ip.FirstOrDefault().ToString();
+            if (labelIPDEVICE.InvokeRequired)
+            {
+                labelIPDEVICE.Invoke(new Action<string>(updateOwnIp));
+            }
+            else
+            {
+                if (serverIp == null)
+                    labelIPDEVICE.Text = "null";
+                labelIPDEVICE.Text = serverIp;
+            }
         }
         private async void Form1_Load(object sender, EventArgs e)
         {
-            _DeployController.DeviceConnectedEvent += async (s, ev) =>
-            {
-                await updateDevices();
-            };
-            _NetworkService.OpenServerEvent += async (s, ev) =>
-            {
-                await updateOwnIp();
-                await updateDevices();
-            };
-            await _initializer.StartAsync();
+            await _initializer.StartAsync(updateDevices, updateOwnIp);
         }
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -150,13 +154,12 @@ namespace EasyConnect
         private async void buttonAUTOSCANN_Click(object sender, EventArgs e)
         {
             await _DeployController?.StartAutoHeadsetConnection();
-            await _InfoController?.StartInfo();
         }
 
         private async void buttonWEBSOCKETCONNECTION_Click(object sender, EventArgs e)
         {
             var serverIp = _NetworkService.GetServerIp();
-            await _AdbService?.AdbStartWebSocketConnection(serverIp);
+            await _AdbService?.AdbStopWebSocketConnectionAsync(serverIp);
         }
     }
 }
