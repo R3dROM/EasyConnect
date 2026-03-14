@@ -1,4 +1,5 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Models;
 using Fleck;
 using System;
 using System.Collections.Generic;
@@ -15,22 +16,26 @@ namespace EasyConnect.Services
         private readonly NetworkService _network;
         private readonly WebSocketService _websocket;
         private readonly AdbService _adb;
+        private readonly HttpController _http;
 
         public AppInitializer(
             InfoController infoController,
             NetworkService network,
             WebSocketService websocket,
-            AdbService adb)
+            AdbService adb,
+            HttpController http)
         {
             _infoController = infoController;
             _network = network;
             _websocket = websocket;
             _adb = adb;
+            _http = http;
         }
 
-        public async Task StartAsync(Action updateDevices, Action<string> updateOwnIp)
+        public async Task StartAsync(Action updateDevices, Action<string> updateOwnIp, Action<string, List<Files>> updateListServer)
         {
-            await _adb.RunCommandAsync("adb", "disconnect");
+            await _adb.RunCommandAsync("adb", "kill-server");
+            await _adb.RunCommandAsync("adb", "start-server");
             var serverIp = (await _network.GetCurrentIp()).FirstOrDefault().ToString();
 
             _infoController.DeviceUpdate += async (s, ev) =>
@@ -42,11 +47,15 @@ namespace EasyConnect.Services
                 await _adb.AdbStartWebSocketConnectionAsync(serverIp);
                 updateDevices();
             };
-            _network.OpenServerEvent += async (s, ev) =>
+            _network.OpenNetworkConnectionEvent += async (s, ev) =>
             {
                 updateOwnIp(serverIp);
                 updateDevices();
-            }; 
+            };
+            _http.OpenServerEvent += async (s, ev, b, f) =>
+            {
+                updateListServer(b, f);
+            };
 
             await _network.StartServerNetwork();
             Debug.WriteLine(serverIp);

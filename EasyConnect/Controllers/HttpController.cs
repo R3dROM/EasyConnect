@@ -1,8 +1,10 @@
 ﻿using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -12,6 +14,7 @@ namespace EasyConnect.Controllers
 {
     public class HttpController
     {
+        public event Func<object, EventArgs, string, List<Files>, Task> OpenServerEvent;
         private readonly AdbService _AdbService;
         private readonly InfoController _InfoController;
         private readonly NetworkService _NetworkServices;
@@ -23,13 +26,25 @@ namespace EasyConnect.Controllers
             _NetworkServices = networkService;
             _InfoController = infoController;
         }
+        protected virtual async Task OnOpenServerEvent(string bundle, List<Files> files)
+        {
+            if (OpenServerEvent == null) return;
 
+            var handlers = OpenServerEvent.GetInvocationList()
+                                           .Cast<Func<object, EventArgs,string, List<Files>, Task>>();
+
+            foreach (var handler in handlers)
+            {
+                await handler(this, EventArgs.Empty, bundle, files);
+            }
+        }
 
         public async Task<Manifest> StartServerConnection()
         {
             _ = StartServerListener();
             var fileNames = await GetFileNameFromServer();
             _NetworkServices.SetBundleId(fileNames.bundle);
+            await OnOpenServerEvent(_NetworkServices.GetBundleId(), fileNames.files);
             return fileNames;
         }
         private async Task<Manifest> GetFileNameFromServer()

@@ -46,6 +46,7 @@ namespace EasyConnect.Services
                     };
                     ws.OnMessage = message =>
                     {
+                        Debug.WriteLine($"{message}");
                         var jsonMessage = JsonSerializer.Deserialize<MessageInfo>(message);
                         Debug.WriteLine(jsonMessage.type);
                         if (jsonMessage != null && jsonMessage.type == "downloadInformation")

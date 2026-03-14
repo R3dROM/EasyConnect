@@ -2,6 +2,7 @@
 using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -64,9 +65,22 @@ namespace EasyConnect
                 labelIPDEVICE.Text = serverIp;
             }
         }
+        private void updateListServer(string bundle, List<Files> files)
+        {
+            if (labelBUNDLE.InvokeRequired)
+                labelBUNDLE.Invoke(new Action<string, List<Files>>(updateListServer));
+            else
+            {
+                labelBUNDLE.Text = bundle;
+                foreach (var file in files)
+                {
+                    listBoxFILENAMES.Items.Add(file.path);
+                }
+            }
+        }
         private async void Form1_Load(object sender, EventArgs e)
         {
-            await _initializer.StartAsync(updateDevices, updateOwnIp);
+            await _initializer.StartAsync(updateDevices, updateOwnIp, updateListServer);
         }
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -96,16 +110,7 @@ namespace EasyConnect
         }
         private async void buttonSERVERCONNECTION_Click(object sender, EventArgs e)
         {
-            Manifest manifest = await _HttpController?.StartServerConnection();
-
-            var bundle = manifest.bundle;
-            var files = manifest.files;
-
-            labelBUNDLE.Text = bundle;
-            foreach ( var file in files )
-            {
-                listBoxFILENAMES.Items.Add( file.path);
-            }
+            await _HttpController.StartServerConnection();
         }
         private void listBoxFILENAMES_SelectedIndexChanged(object sender, EventArgs e)
         {

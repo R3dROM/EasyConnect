@@ -12,7 +12,7 @@ namespace EasyConnect.Services
 {
     public class NetworkService
     {
-        public event Func<object, EventArgs, Task> OpenServerEvent;
+        public event Func<object, EventArgs, Task> OpenNetworkConnectionEvent;
         public IPAddress[] myIpAddress;
         public string _serverIp;
         public string _serverPort = "8000";
@@ -22,11 +22,11 @@ namespace EasyConnect.Services
         {
 
         }
-        protected virtual async Task OnOpenServerEvent()
+        protected virtual async Task OnOpenNetworkEvent()
         {
-            if (OpenServerEvent == null) return;
+            if (OpenNetworkConnectionEvent == null) return;
 
-            var handlers = OpenServerEvent.GetInvocationList()
+            var handlers = OpenNetworkConnectionEvent.GetInvocationList()
                                            .Cast<Func<object, EventArgs, Task>>();
 
             foreach (var handler in handlers)
@@ -39,7 +39,7 @@ namespace EasyConnect.Services
         public async Task StartServerNetwork()
         {
             _serverIp = myIpAddress.FirstOrDefault().ToString();
-            await OnOpenServerEvent();
+            await OnOpenNetworkEvent();
         }
         public async Task<IPAddress[]> GetCurrentIp()  {
             myIpAddress = await GetMyIpAddress();
