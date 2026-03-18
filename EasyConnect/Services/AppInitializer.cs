@@ -32,11 +32,11 @@ namespace EasyConnect.Services
             _http = http;
         }
 
-        public async Task StartAsync(Action updateDevices, Action<string> updateOwnIp, Action<string, List<Files>> updateListServer)
+        public async Task StartAsync(Action updateDevices, Action updateOwnIp, Action<string, List<Files>> updateListServer)
         {
             await _adb.RunCommandAsync("adb", "kill-server");
             await _adb.RunCommandAsync("adb", "start-server");
-            var serverIp = (await _network.GetCurrentIp()).FirstOrDefault().ToString();
+
 
             _infoController.DeviceUpdate += async (s, ev) =>
             {
@@ -44,12 +44,12 @@ namespace EasyConnect.Services
             };
             _adb.DeviceConnectedEvent += async (s, ev) =>
             {
-                await _adb.AdbStartWebSocketConnectionAsync(serverIp);
+                await _adb.AdbStartWebSocketConnectionAsync();
                 updateDevices();
             };
             _network.OpenNetworkConnectionEvent += async (s, ev) =>
             {
-                updateOwnIp(serverIp);
+                updateOwnIp();
                 updateDevices();
             };
             _http.OpenServerEvent += async (s, ev, b, f) =>
@@ -58,8 +58,7 @@ namespace EasyConnect.Services
             };
 
             await _network.StartServerNetwork();
-            Debug.WriteLine(serverIp);
-            await _websocket.StartAsync(serverIp);
+            await _websocket.StartAsync();
         }
     }
 }

@@ -17,8 +17,8 @@ namespace EasyConnect
         {
             var services = new ServiceCollection();
             services.AddSingleton<InfoController>();
-            services.AddSingleton<AdbService>();
             services.AddSingleton<ConsoleService>();
+            services.AddSingleton<AdbService>();
             services.AddSingleton<NetworkService>();
             services.AddSingleton<WebSocketService>();
             services.AddSingleton<DeployController>();

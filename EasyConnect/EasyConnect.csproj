@@ -92,7 +92,6 @@
     <Compile Include="Models\Devices.cs" />
     <Compile Include="Models\Manifest.cs" />
     <Compile Include="Models\MessageInfo.cs" />
-    <Compile Include="Models\WindowVariables.cs" />
     <Compile Include="Services\AdbService.cs" />
     <Compile Include="Services\AppInitializer.cs" />
     <Compile Include="Services\ConnectionService.cs" />
@@ -121,6 +120,8 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <None Include="packages.config" />
+    <None Include="Properties\DataSources\EasyConnect.Models.DeviceReport.datasource" />
+    <None Include="Properties\DataSources\EasyConnect.Services.AdbService.datasource" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -134,7 +135,9 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets" Condition="Exists('packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

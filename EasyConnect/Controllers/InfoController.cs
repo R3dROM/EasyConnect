@@ -1,10 +1,12 @@
 ﻿using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace EasyConnect.Controllers
 {
@@ -14,7 +16,6 @@ namespace EasyConnect.Controllers
 
         public InfoController()
         {
-
         }
         public virtual async Task OnDeviceUpdate()
         {

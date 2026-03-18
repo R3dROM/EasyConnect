@@ -31,7 +31,7 @@ namespace EasyConnect.Controllers
             if (OpenServerEvent == null) return;
 
             var handlers = OpenServerEvent.GetInvocationList()
-                                           .Cast<Func<object, EventArgs,string, List<Files>, Task>>();
+                                           .Cast<Func<object, EventArgs, string, List<Files>, Task>>();
 
             foreach (var handler in handlers)
             {

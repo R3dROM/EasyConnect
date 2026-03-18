@@ -23,9 +23,9 @@ namespace EasyConnect.Services
             networkService = _NetworkService;
             adbService = _AdbService;
         }
-        public async Task StartAsync(string ip)
+        public async Task StartAsync()
         {
-            serverIp = ip;
+            serverIp = networkService.GetServerIp();
             server = new WebSocketServer($"ws://{serverIp}:8181");
             await StartWebSocketServer();
         }
@@ -48,7 +48,7 @@ namespace EasyConnect.Services
                     {
                         Debug.WriteLine($"{message}");
                         var jsonMessage = JsonSerializer.Deserialize<MessageInfo>(message);
-                        Debug.WriteLine(jsonMessage.type);
+                        //Debug.WriteLine(jsonMessage.type);
                         if (jsonMessage != null && jsonMessage.type == "downloadInformation")
                         {
                             var result = adbService?.GetDevice(ws.ConnectionInfo.ClientIpAddress);
@@ -80,7 +80,7 @@ namespace EasyConnect.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Debug.WriteLine("Error WEBSOCKET: " + ex);
                 throw;
             }
         }

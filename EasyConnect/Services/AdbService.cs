@@ -4,26 +4,36 @@ using Fleck;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace EasyConnect.Services
 {
     public class AdbService
     {
         private readonly InfoController _infoController;
+        private readonly NetworkService _networkService;
         public event Func<object, EventArgs, Task> DeviceConnectedEvent;
         private readonly ConcurrentDictionary<string, DeviceReport> _devices = new ConcurrentDictionary<string, DeviceReport>();
+        private readonly BindingList<DeviceReport> devices = new BindingList<DeviceReport>();
         public string _headsetCode { get; private set; }
         public string _headsetIp { get; private set; }
         public string _headsetPort { get; private set; } = "5555";
         public bool _newDevice { get; private set; } = false;
-        public AdbService(InfoController infoController)
+
+        public AdbService(InfoController infoController, NetworkService networkService)
         {
             _infoController = infoController;
+            _networkService = networkService;
+
+            devices.AllowEdit = false;
+            devices.AllowRemove = false;
+            devices.Clear();
         }
         protected virtual async Task OnDeviceConnectedEvent()
         {
@@ -49,14 +59,18 @@ namespace EasyConnect.Services
         public void SetHeadsetPort(string portHeadset) { _headsetPort = portHeadset; }
         //SET CHECKS
         public void SetNewDeviceCheck(bool check) { _newDevice = check; }
-        public void AddDevice(DeviceReport device) { _devices.TryAdd(device.deviceId, device); }
+        public void AddDevice(DeviceReport device) { _devices.TryAdd(device.deviceId, device); WINDOW.mainWindow.AddDevice(device); }
         public async Task UpdateDevice(DeviceReport newDevice) 
         {
             Debug.WriteLine(_devices.TryUpdate(newDevice.deviceId, newDevice, _devices[newDevice.deviceId]));
+            var index = devices.Where(d => d.deviceId == newDevice.deviceId).FirstOrDefault();
+            var deviceToRemove = devices.ToList().IndexOf(index);
+            devices[deviceToRemove] = newDevice;
             await _infoController.OnDeviceUpdate();
         }
         public void RemoveDevice(DeviceReport device) { _devices.TryRemove(device.deviceId, out _); }
         public ConcurrentDictionary<string, DeviceReport> GetDevicesList() { return _devices; }
+        public BindingList<DeviceReport> GetBindingList() { return devices; }
         public DeviceReport GetDevice(string deviceId) {
             _devices.TryGetValue(deviceId, out var result);
             return result;
@@ -136,8 +150,11 @@ namespace EasyConnect.Services
             }
             return (ExitCode, Output);
         }
-        public async Task AdbDownload(string ipServer, string portServer)
+        public async Task AdbDownload()
         {
+            var ipServer = _networkService.GetServerIp();
+            var portServer = _networkService.GetServerPort();
+
             var debug = await AdbOverDevice($"shell am start-foreground-service " +
                         $"-n com.easyconnect.agent/.DownloadService " +
                         $"--es url http://{ipServer}:{portServer} ");
@@ -146,20 +163,20 @@ namespace EasyConnect.Services
                 Debug.WriteLine(device.ToString());
             }
         }
-        public async Task AdbStartWebSocketConnectionAsync(string ipServer)
+        public async Task AdbStartWebSocketConnectionAsync()
         {
+            var ipServer = _networkService.GetServerIp();
             var exit = await AdbOverDevice($"shell am start-foreground-service " +
             $"-n com.easyconnect.agent/.WebSocketService " +
             $"--es webSocketUrl ws://{ipServer}:8181");
-            Debug.WriteLine(exit.FirstOrDefault().ToString());
         }
-        public async Task AdbStopWebSocketConnectionAsync(string ipServer)
+        public async Task AdbStopWebSocketConnectionAsync()
         {
+            var ipServer = _networkService.GetServerIp();
             var exit = await AdbOverDevice($"shell am start-foreground-service " +
             $"-n com.easyconnect.agent/.WebSocketService " +
             $"--es webSocketUrl ws://{ipServer}:8181 " +
             $"--es stop true");
-            Debug.WriteLine(exit.FirstOrDefault().ToString());
         }
         public async Task AdbMove(string bundleID)
         {
@@ -185,7 +202,6 @@ namespace EasyConnect.Services
             var tasks = new List<Task<(int ExitCode, string Output)>>();
             foreach (var device in _devices)
             {
-                Debug.WriteLine(device.Key + ": " + device.Value);
                 var ip = device.Key;
                 tasks.Add(Task.Run(async () => 
                 {
@@ -214,10 +230,14 @@ namespace EasyConnect.Services
                     return result;
                 }
                 Debug.WriteLine(device.apkSize);
-                var task = await RunAdbAsync($"install-create -r -S {device.apkSize}");
+                var bundle = _networkService.GetBundleId();
+                var task = await RunCommandAsync("adb", $"-s {device.deviceId} shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/apk/{device.apkName} " +
+                "/data/local/tmp/");
+
+                task = await RunAdbAsync($"install-create -r -g -S {device.apkSize}");
                 sessionId = FindSessionID(task.Output);
 
-                task = await RunAdbAsync($"install-write -S {device.apkSize} {sessionId} base.apk {device.apkPath}");
+                task = await RunAdbAsync($"install-write -S {device.apkSize} {sessionId} base.apk /data/local/tmp/{device.apkName}");
                 task = await RunAdbAsync($"install-commit {sessionId}");
 
                 return (0, outputBuilder.ToString());

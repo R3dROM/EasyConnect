@@ -38,14 +38,15 @@ namespace EasyConnect.Services
         // GET DESKTOP/SERVER
         public async Task StartServerNetwork()
         {
-            _serverIp = myIpAddress.FirstOrDefault().ToString();
+            GetCurrentIp();
             await OnOpenNetworkEvent();
         }
-        public async Task<IPAddress[]> GetCurrentIp()  {
-            myIpAddress = await GetMyIpAddress();
+        public IPAddress[] GetCurrentIp()  {
+            myIpAddress = GetMyIpAddress();
+            _serverIp = myIpAddress.FirstOrDefault().ToString();
             return myIpAddress; 
         }
-        public string GetServerIp() { return myIpAddress.FirstOrDefault().ToString(); }
+        public string GetServerIp() { return myIpAddress.FirstOrDefault().MapToIPv4().ToString() ?? GetCurrentIp().FirstOrDefault().MapToIPv4().ToString(); }
         public string GetServerPort() { return _serverPort; }
         public string GetBundleId() { return _bundle; }
         // SET DESKTOP/SERVER
@@ -56,7 +57,7 @@ namespace EasyConnect.Services
 
         public async Task<IPAddress[]> StartAutoConnectionAsync()
         {
-            var _myIpAddress = await GetMyIpAddress();
+            var _myIpAddress = GetMyIpAddress();
             var _serverIp = _myIpAddress.FirstOrDefault().ToString();
             SetCurrentIp(_myIpAddress);
             SetServerIp(_serverIp);
@@ -65,12 +66,12 @@ namespace EasyConnect.Services
         public async Task<IPAddress[]> NetworkScannerAsync(IPAddress[] myIpAddress)
         {
             var ipv4 = myIpAddress.FirstOrDefault();
-            if (ipv4 == null || !await IsLocalAddress(ipv4)) return null;
+            if (ipv4 == null || !IsLocalAddress(ipv4)) return null;
 
-            var ipSubMask = await GetSubnetMask(ipv4);
+            var ipSubMask = GetSubnetMask(ipv4);
             if (ipSubMask == null) return null;
 
-            var (start, end) = await GetIpRange(ipv4, ipSubMask);
+            var (start, end) = GetIpRange(ipv4, ipSubMask);
             var startIp = IpToUint(start);
             var endIp = IpToUint(end);
 
@@ -137,11 +138,11 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-        public async Task<IPAddress[]> GetMyIpAddress()
+        public IPAddress[] GetMyIpAddress()
         {
             try
             {
-                var currentIPs =  await Dns.GetHostAddressesAsync(Dns.GetHostName());
+                var currentIPs =  Dns.GetHostAddresses(Dns.GetHostName());
                 return currentIPs
                     .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
                     .ToArray();
@@ -153,14 +154,14 @@ namespace EasyConnect.Services
             }
         }
         // Verifica si la IP pertenece a alguna interfaz local
-        public async Task<bool> IsLocalAddress(IPAddress ip)
+        public bool IsLocalAddress(IPAddress ip)
         {
             return NetworkInterface.GetAllNetworkInterfaces()
                 .SelectMany(n => n.GetIPProperties().UnicastAddresses)
                 .Any(a => a.Address.Equals(ip));
         }
         // Obtiene la máscara de subred de una IP local
-        private async Task<IPAddress> GetSubnetMask(IPAddress address)
+        private IPAddress GetSubnetMask(IPAddress address)
         {
             foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -175,7 +176,7 @@ namespace EasyConnect.Services
             return null;
         }
         // Calcula el rango de IPs a partir de IP y máscara
-        private async Task<(IPAddress start, IPAddress end)> GetIpRange(IPAddress ip, IPAddress mask)
+        private (IPAddress start, IPAddress end) GetIpRange(IPAddress ip, IPAddress mask)
         {
             byte[] ipBytes = ip.GetAddressBytes();
             byte[] maskBytes = mask.GetAddressBytes();

@@ -3,6 +3,7 @@ using EasyConnect.Models;
 using EasyConnect.Services;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace EasyConnect
 {
     public partial class WINDOW : Form
     {
+        public static WINDOW mainWindow;
         private readonly AppInitializer _initializer;
         private readonly DeployController _DeployController;
         private readonly InfoController _InfoController;
@@ -20,6 +22,7 @@ namespace EasyConnect
         private readonly WebSocketService _WebSocketService;
         private readonly AdbService _AdbService;
         private readonly NetworkService _NetworkService;
+
         public WINDOW(
             NetworkService _NetworkService, WebSocketService _WebSocketService, 
             AdbService _AdbService, DeployController _DeployController, 
@@ -35,6 +38,26 @@ namespace EasyConnect
             this._InfoController = _InfoController;
             this._HttpController = _HttpController;
             this._initializer = _initializer;
+
+            mainWindow = this;
+        }
+        public void AddDevice(DeviceReport device)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<DeviceReport>(AddDevice), device);
+                return;
+            }
+            _AdbService.GetBindingList().Add(device);
+        }
+        public void updateDevice(DeviceReport device)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<DeviceReport>(AddDevice), device);
+                return;
+            }
+
         }
         private void updateDevices()
         {
@@ -52,14 +75,15 @@ namespace EasyConnect
                 }
             }
         }
-        private void updateOwnIp(string serverIp)
+        private void updateOwnIp()
         {
             if (labelIPDEVICE.InvokeRequired)
             {
-                labelIPDEVICE.Invoke(new Action<string>(updateOwnIp));
+                labelIPDEVICE.Invoke(new Action(updateOwnIp));
             }
             else
             {
+                var serverIp = _NetworkService.GetServerIp();
                 if (serverIp == null)
                     labelIPDEVICE.Text = "null";
                 labelIPDEVICE.Text = serverIp;
@@ -81,6 +105,10 @@ namespace EasyConnect
         private async void Form1_Load(object sender, EventArgs e)
         {
             await _initializer.StartAsync(updateDevices, updateOwnIp, updateListServer);
+            dataGridView1.DataSource = _AdbService.GetBindingList();
+            dataGridView1.AllowUserToAddRows = false;
+            dataGridView1.AllowUserToDeleteRows = false;
+            dataGridView1.ReadOnly = true;
         }
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -117,13 +145,10 @@ namespace EasyConnect
         }
         private async void buttonDOWNLOAD_Click(object sender, EventArgs e)
         {
-            var serverIp = _NetworkService.GetServerIp();
-            var serverPort = _NetworkService.GetServerPort();
-            await _AdbService.AdbDownload(serverIp, serverPort);
+            await _AdbService.AdbDownload();
         }
         private void listBoxDEVICES_SelectedIndexChanged(object sender, EventArgs e)
         {
-
         }
         private async void buttonMOVE_Click(object sender, EventArgs e)
         {
@@ -163,8 +188,12 @@ namespace EasyConnect
 
         private async void buttonWEBSOCKETCONNECTION_Click(object sender, EventArgs e)
         {
-            var serverIp = _NetworkService.GetServerIp();
-            await _AdbService?.AdbStopWebSocketConnectionAsync(serverIp);
+            await _AdbService?.AdbStopWebSocketConnectionAsync();
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            
         }
     }
 }

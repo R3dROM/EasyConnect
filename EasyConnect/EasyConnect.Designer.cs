@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.Title = new System.Windows.Forms.Label();
             this.groupIPConnect = new System.Windows.Forms.GroupBox();
             this.buttonAUTOSCANN = new System.Windows.Forms.Button();
@@ -53,12 +54,30 @@
             this.labelCURRENTIP = new System.Windows.Forms.Label();
             this.labelIPDEVICE = new System.Windows.Forms.Label();
             this.groupBoxDEVICES = new System.Windows.Forms.GroupBox();
+            this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.listBoxDEVICES = new System.Windows.Forms.ListBox();
             this.labelBUNDLE = new System.Windows.Forms.Label();
             this.buttonWEBSOCKETCONNECTION = new System.Windows.Forms.Button();
+            this.deviceIdDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.bundleDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.downloadStatusDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.installStatusDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.currentFileDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.percentDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.apkPathDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.apkNameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.apkSizeDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.timestampDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.deviceReportBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.adbServiceBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.adbServiceBindingSource1 = new System.Windows.Forms.BindingSource(this.components);
             this.groupIPConnect.SuspendLayout();
             this.groupBoxSERVER.SuspendLayout();
             this.groupBoxDEVICES.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.deviceReportBindingSource)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.adbServiceBindingSource)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.adbServiceBindingSource1)).BeginInit();
             this.SuspendLayout();
             // 
             // Title
@@ -331,6 +350,7 @@
             // 
             // groupBoxDEVICES
             // 
+            this.groupBoxDEVICES.Controls.Add(this.dataGridView1);
             this.groupBoxDEVICES.Controls.Add(this.listBoxDEVICES);
             this.groupBoxDEVICES.Location = new System.Drawing.Point(376, 52);
             this.groupBoxDEVICES.Margin = new System.Windows.Forms.Padding(2);
@@ -341,11 +361,43 @@
             this.groupBoxDEVICES.TabStop = false;
             this.groupBoxDEVICES.Text = "DEVICES";
             // 
+            // dataGridView1
+            // 
+            this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.AllowUserToOrderColumns = true;
+            this.dataGridView1.AllowUserToResizeRows = false;
+            this.dataGridView1.AutoGenerateColumns = false;
+            this.dataGridView1.BackgroundColor = System.Drawing.SystemColors.ActiveCaption;
+            this.dataGridView1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.deviceIdDataGridViewTextBoxColumn,
+            this.bundleDataGridViewTextBoxColumn,
+            this.downloadStatusDataGridViewTextBoxColumn,
+            this.installStatusDataGridViewTextBoxColumn,
+            this.currentFileDataGridViewTextBoxColumn,
+            this.percentDataGridViewTextBoxColumn,
+            this.apkPathDataGridViewTextBoxColumn,
+            this.apkNameDataGridViewTextBoxColumn,
+            this.apkSizeDataGridViewTextBoxColumn,
+            this.timestampDataGridViewTextBoxColumn});
+            this.dataGridView1.DataSource = this.deviceReportBindingSource;
+            this.dataGridView1.Enabled = false;
+            this.dataGridView1.GridColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.dataGridView1.Location = new System.Drawing.Point(4, 15);
+            this.dataGridView1.MultiSelect = false;
+            this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
+            this.dataGridView1.Size = new System.Drawing.Size(455, 136);
+            this.dataGridView1.TabIndex = 1;
+            this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
+            // 
             // listBoxDEVICES
             // 
             this.listBoxDEVICES.FormattingEnabled = true;
             this.listBoxDEVICES.HorizontalScrollbar = true;
-            this.listBoxDEVICES.Location = new System.Drawing.Point(4, 21);
+            this.listBoxDEVICES.Location = new System.Drawing.Point(4, 17);
             this.listBoxDEVICES.Margin = new System.Windows.Forms.Padding(2);
             this.listBoxDEVICES.Name = "listBoxDEVICES";
             this.listBoxDEVICES.Size = new System.Drawing.Size(454, 134);
@@ -373,6 +425,88 @@
             this.buttonWEBSOCKETCONNECTION.UseVisualStyleBackColor = true;
             this.buttonWEBSOCKETCONNECTION.Click += new System.EventHandler(this.buttonWEBSOCKETCONNECTION_Click);
             // 
+            // deviceIdDataGridViewTextBoxColumn
+            // 
+            this.deviceIdDataGridViewTextBoxColumn.DataPropertyName = "deviceId";
+            this.deviceIdDataGridViewTextBoxColumn.HeaderText = "deviceId";
+            this.deviceIdDataGridViewTextBoxColumn.Name = "deviceIdDataGridViewTextBoxColumn";
+            this.deviceIdDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // bundleDataGridViewTextBoxColumn
+            // 
+            this.bundleDataGridViewTextBoxColumn.DataPropertyName = "bundle";
+            this.bundleDataGridViewTextBoxColumn.HeaderText = "bundle";
+            this.bundleDataGridViewTextBoxColumn.Name = "bundleDataGridViewTextBoxColumn";
+            this.bundleDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // downloadStatusDataGridViewTextBoxColumn
+            // 
+            this.downloadStatusDataGridViewTextBoxColumn.DataPropertyName = "downloadStatus";
+            this.downloadStatusDataGridViewTextBoxColumn.HeaderText = "downloadStatus";
+            this.downloadStatusDataGridViewTextBoxColumn.Name = "downloadStatusDataGridViewTextBoxColumn";
+            this.downloadStatusDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // installStatusDataGridViewTextBoxColumn
+            // 
+            this.installStatusDataGridViewTextBoxColumn.DataPropertyName = "installStatus";
+            this.installStatusDataGridViewTextBoxColumn.HeaderText = "installStatus";
+            this.installStatusDataGridViewTextBoxColumn.Name = "installStatusDataGridViewTextBoxColumn";
+            this.installStatusDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // currentFileDataGridViewTextBoxColumn
+            // 
+            this.currentFileDataGridViewTextBoxColumn.DataPropertyName = "currentFile";
+            this.currentFileDataGridViewTextBoxColumn.HeaderText = "currentFile";
+            this.currentFileDataGridViewTextBoxColumn.Name = "currentFileDataGridViewTextBoxColumn";
+            this.currentFileDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // percentDataGridViewTextBoxColumn
+            // 
+            this.percentDataGridViewTextBoxColumn.DataPropertyName = "percent";
+            this.percentDataGridViewTextBoxColumn.HeaderText = "percent";
+            this.percentDataGridViewTextBoxColumn.Name = "percentDataGridViewTextBoxColumn";
+            this.percentDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // apkPathDataGridViewTextBoxColumn
+            // 
+            this.apkPathDataGridViewTextBoxColumn.DataPropertyName = "apkPath";
+            this.apkPathDataGridViewTextBoxColumn.HeaderText = "apkPath";
+            this.apkPathDataGridViewTextBoxColumn.Name = "apkPathDataGridViewTextBoxColumn";
+            this.apkPathDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // apkNameDataGridViewTextBoxColumn
+            // 
+            this.apkNameDataGridViewTextBoxColumn.DataPropertyName = "apkName";
+            this.apkNameDataGridViewTextBoxColumn.HeaderText = "apkName";
+            this.apkNameDataGridViewTextBoxColumn.Name = "apkNameDataGridViewTextBoxColumn";
+            this.apkNameDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // apkSizeDataGridViewTextBoxColumn
+            // 
+            this.apkSizeDataGridViewTextBoxColumn.DataPropertyName = "apkSize";
+            this.apkSizeDataGridViewTextBoxColumn.HeaderText = "apkSize";
+            this.apkSizeDataGridViewTextBoxColumn.Name = "apkSizeDataGridViewTextBoxColumn";
+            this.apkSizeDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // timestampDataGridViewTextBoxColumn
+            // 
+            this.timestampDataGridViewTextBoxColumn.DataPropertyName = "timestamp";
+            this.timestampDataGridViewTextBoxColumn.HeaderText = "timestamp";
+            this.timestampDataGridViewTextBoxColumn.Name = "timestampDataGridViewTextBoxColumn";
+            this.timestampDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // deviceReportBindingSource
+            // 
+            this.deviceReportBindingSource.DataSource = typeof(EasyConnect.Models.DeviceReport);
+            // 
+            // adbServiceBindingSource
+            // 
+            this.adbServiceBindingSource.DataSource = typeof(EasyConnect.Services.AdbService);
+            // 
+            // adbServiceBindingSource1
+            // 
+            this.adbServiceBindingSource1.DataSource = typeof(EasyConnect.Services.AdbService);
+            // 
             // WINDOW
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -399,6 +533,10 @@
             this.groupBoxSERVER.ResumeLayout(false);
             this.groupBoxSERVER.PerformLayout();
             this.groupBoxDEVICES.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.deviceReportBindingSource)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.adbServiceBindingSource)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.adbServiceBindingSource1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -434,6 +572,20 @@
         private System.Windows.Forms.TextBox textBoxNEWDEVICE;
         private System.Windows.Forms.Button buttonAUTOSCANN;
         private System.Windows.Forms.Button buttonWEBSOCKETCONNECTION;
+        private System.Windows.Forms.DataGridView dataGridView1;
+        private System.Windows.Forms.BindingSource adbServiceBindingSource;
+        private System.Windows.Forms.BindingSource adbServiceBindingSource1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn deviceIdDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn bundleDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn downloadStatusDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn installStatusDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn currentFileDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn percentDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn apkPathDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn apkNameDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn apkSizeDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn timestampDataGridViewTextBoxColumn;
+        private System.Windows.Forms.BindingSource deviceReportBindingSource;
     }
 }
 
