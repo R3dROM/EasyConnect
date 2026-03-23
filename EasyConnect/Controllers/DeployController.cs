@@ -1,59 +1,77 @@
-﻿using EasyConnect.Services;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Net;
+﻿using EasyConnect.Models;
+using EasyConnect.Services;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EasyConnect.Controllers
 {
-    public class DeployController
+    public class DeployController(
+        ConnectionService connectionService,
+        NetworkService networkService,
+        WebSocketService websocketService,
+        DeploymentService deploymentService)
     {
-        private readonly AdbService _adbService;
-        private readonly NetworkService _networkService;
-        private readonly WebSocketService _websocketService;
+        private readonly ConnectionService _connectionService = connectionService;
+        private readonly NetworkService _networkService = networkService;
+        private readonly WebSocketService _websocketService = websocketService;
+        private readonly DeploymentService _deploymentService = deploymentService;
 
-        public DeployController(
-            AdbService adbService,  
-            NetworkService networkService,
-            WebSocketService websocketService)
+        public async Task StartDownload()
         {
-            _adbService = adbService;
-            _networkService = networkService;
-            _websocketService = websocketService;
+            var serverIp = _networkService.serverIp;
+            var serverPort = _networkService.serverPort;
+            await _deploymentService.AdbDownload(serverIp, serverPort);
+        }
+        public async Task StartMove()
+        {
+            var bundle = _networkService.bundle;
+            await _deploymentService.AdbMove(bundle);
         }
         public async Task StartInstaller()
         {
-            await _adbService.AdbInstall();
+            await _deploymentService.AdbInstall();
         }
         public async Task StartManualHeadsetConnection()
         {
-            var (ExitCode, Output) = await Task.Run(async () =>
+            DeviceCommandResult? result = null;
+            try
             {
-                if (_adbService.GetNewDeviceCheck())
-                    return await _adbService.AdbPair();
-                return await _adbService.AdbConnection();
-            });
-            Debug.WriteLine($"Exception Code: {ExitCode}\n" +
-                $"Output: {Output}");
+                if (_connectionService.NewDevice)
+                    result = await _connectionService.AdbPair();
+                else
+                    result = await _connectionService.AdbConnectionFromPc();
+                if (result.ExitCode == 0)
+                {
+                    await _websocketService.StartWebSocketConnectionAsync(result.DeviceId);
+                }
+                Debug.WriteLine(result.ToString());
+            }
+            catch (Exception)
+            {
+                await _websocketService.StopWebSocketConnectionAsync(result?.DeviceId);
+                throw;
+            }
         }
         public async Task StartAutoHeadsetConnection()
         {
-            var headsets = await _networkService.StartAutoConnectionAsync();
-            if (headsets.Length > 0)
+            try
             {
-                foreach (var headset in headsets)
-                {
-                    _adbService.SetHeadsetIp(headset.ToString());
-                    var (ExceptionCode, Output) = await _adbService.AdbConnection();
-                    Debug.WriteLine($"Exception Code: {ExceptionCode}\n" +
-                        $"Output: {Output}");
-                }
-                _adbService.SetHeadsetIp("");
+                var ipAddresses = await _networkService.StartAutoConnectionAsync();
+                if (ipAddresses == null || ipAddresses.Length == 0)
+                    return;
+                await _connectionService.ConnectMultipleDevices(ipAddresses);
+                await _websocketService.StartWebSocketConnectionAsync();
             }
-            else
+            catch (Exception)
             {
-                Debug.WriteLine("No devices found, try again.");
+                Debug.WriteLine("Error al iniciar websocket");
+                await _websocketService.StopWebSocketConnectionAsync();
+                throw;
             }
         }
     }

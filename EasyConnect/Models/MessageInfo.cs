@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EasyConnect.Models
 {
@@ -10,20 +6,21 @@ namespace EasyConnect.Models
     public class MessageInfo
     {
         public MessageInfo() { }
-        public string type { get; set; }
-        public DownloadInfo payload { get; set; }
+        public required string type { get; set; }
+        public WebSocketInformation? payload { get; set; }
     }
     [Serializable]
-    public class DownloadInfo
+    public class WebSocketInformation
     {
-        public string deviceId {  get; set; }
-        public bool status { get; set; }
-        public string currentFile { get; set; }
-        public string bundle {  get; set; }
-        public string apkPath { get; set; }
-        public string apkName { get; set; }
-        public long apkSize { get; set; }
-        public long timestamp {  get; set; }
-        public int percent { get; set; }
+        public string ip { get; set; } = "";
+        public string? serialNumber { get; set; }
+        public int? batteryLvl {  get; set; }
+        public string? status { get; set; }
+        public string? currentFile { get; set; }
+        public string? bundle {  get; set; }
+        public string? apkName { get; set; }
+        public long? apkSize { get; set; }
+        public long? timestamp {  get; set; }
+        public int? percent { get; set; }
     }
 }

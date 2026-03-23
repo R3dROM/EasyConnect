@@ -12,20 +12,14 @@ using System.Threading.Tasks;
 
 namespace EasyConnect.Controllers
 {
-    public class HttpController
+    public class HttpController(AdbService adbService, NetworkService networkService, InfoController infoController)
     {
-        public event Func<object, EventArgs, string, List<Files>, Task> OpenServerEvent;
-        private readonly AdbService _AdbService;
-        private readonly InfoController _InfoController;
-        private readonly NetworkService _NetworkServices;
-        private HttpListener _HttpListener;
+        public event Func<object, EventArgs, string, List<Files>, Task>? OpenServerEvent;
+        private readonly AdbService _AdbService = adbService;
+        private readonly InfoController _InfoController = infoController;
+        private readonly NetworkService _NetworkServices = networkService;
+        private HttpListener? _HttpListener;
 
-        public HttpController(AdbService adbService, NetworkService networkService, InfoController infoController)
-        {
-            _AdbService = adbService;
-            _NetworkServices = networkService;
-            _InfoController = infoController;
-        }
         protected virtual async Task OnOpenServerEvent(string bundle, List<Files> files)
         {
             if (OpenServerEvent == null) return;
@@ -39,36 +33,37 @@ namespace EasyConnect.Controllers
             }
         }
 
-        public async Task<Manifest> StartServerConnection()
+        public async Task<Manifest?> StartServerConnection()
         {
             _ = StartServerListener();
             var fileNames = await GetFileNameFromServer();
-            _NetworkServices.SetBundleId(fileNames.bundle);
-            await OnOpenServerEvent(_NetworkServices.GetBundleId(), fileNames.files);
-            return fileNames;
+            if (fileNames != null)
+            {
+                _NetworkServices.bundle = fileNames.bundle;
+                await OnOpenServerEvent(_NetworkServices.bundle, fileNames.files);
+                return fileNames;
+            }
+            return null;
         }
-        private async Task<Manifest> GetFileNameFromServer()
+        private async Task<Manifest?> GetFileNameFromServer()
         {
-            Manifest files = new Manifest();
-            var ipServer = _NetworkServices.GetServerIp();
-            var portServer = _NetworkServices.GetServerPort();
+            var ipServer = _NetworkServices.serverIp;
+            var portServer = _NetworkServices.serverPort;
             string url = $"http://{ipServer}:{portServer}/manifest.json";
 
-            using (HttpClient client = new HttpClient())
+            using HttpClient client = new();
+            try
             {
-                try
-                {
-                    var code = await client.GetAsync(url);
-                    var json = await client.GetStringAsync(url);
+                var code = await client.GetAsync(url);
+                var json = await client.GetStringAsync(url);
 
-                    files = JsonSerializer.Deserialize<Manifest>(json);
-                    return files;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex.Message);
-                    return null;
-                }
+                var files = JsonSerializer.Deserialize<Manifest>(json);
+                return files;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return null;
             }
         }
 
@@ -84,44 +79,44 @@ namespace EasyConnect.Controllers
 
             while (true)
             {
-                var context = await _HttpListener.GetContextAsync();
-                await Task.Run(() => HandleRequest(context));
+                await _HttpListener.GetContextAsync();
+                //await Task.Run(() => HandleRequest(context));
             }
         }
-        private async Task HandleRequest(HttpListenerContext context)
-        {
-            try
-            {
-                if (context.Request.HttpMethod == "POST")
-                {
-                    using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
-                    {
-                        string body = await reader.ReadToEndAsync();
+        //private async Task HandleRequest(HttpListenerContext context)
+        //{
+        //    try
+        //    {
+        //        if (context.Request.HttpMethod == "POST")
+        //        {
+        //            using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+        //            {
+        //                string body = await reader.ReadToEndAsync();
 
-                        Debug.WriteLine("JSON recibido:");
-                        Debug.WriteLine(body);
+        //                Debug.WriteLine("JSON recibido:");
+        //                Debug.WriteLine(body);
 
-                        // Parsear JSON
-                        var deviceReport = JsonSerializer.Deserialize<DeviceReport>(body);
-                        _AdbService.UpdateDevice(deviceReport);
+        //                // Parsear JSON
+        //                var deviceReport = JsonSerializer.Deserialize<DeviceReport>(body);
+        //                _AdbService.UpdateDevice(deviceReport);
 
-                        context.Response.StatusCode = 200;
-                    }
-                }
-                else
-                {
-                    context.Response.StatusCode = 405;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                context.Response.StatusCode = 500;
-            }
-            finally
-            {
-                context.Response.Close();
-            }
-        }
+        //                context.Response.StatusCode = 200;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            context.Response.StatusCode = 405;
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine(ex);
+        //        context.Response.StatusCode = 500;
+        //    }
+        //    finally
+        //    {
+        //        context.Response.Close();
+        //    }
+        //}
     }
 }

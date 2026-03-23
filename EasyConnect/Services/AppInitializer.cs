@@ -1,64 +1,57 @@
 ﻿using EasyConnect.Controllers;
 using EasyConnect.Models;
-using Fleck;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class AppInitializer
+    public class AppInitializer(
+        NetworkService network,
+        WebSocketService websocket,
+        AdbService adb,
+        HttpController http,
+        DeviceManager deviceManager)
     {
-        private readonly InfoController _infoController;
-        private readonly NetworkService _network;
-        private readonly WebSocketService _websocket;
-        private readonly AdbService _adb;
-        private readonly HttpController _http;
+        private readonly DeviceManager _deviceManager = deviceManager;
+        private readonly NetworkService _network = network;
+        private readonly WebSocketService _websocket = websocket;
+        private readonly AdbService _adb = adb;
+        private readonly HttpController _http = http;
 
-        public AppInitializer(
-            InfoController infoController,
-            NetworkService network,
-            WebSocketService websocket,
-            AdbService adb,
-            HttpController http)
+        public async Task StartAsync(Action<string, List<Files>> updateListServer, SynchronizationContext _UiContext)
         {
-            _infoController = infoController;
-            _network = network;
-            _websocket = websocket;
-            _adb = adb;
-            _http = http;
-        }
-
-        public async Task StartAsync(Action updateDevices, Action updateOwnIp, Action<string, List<Files>> updateListServer)
-        {
-            await _adb.RunCommandAsync("adb", "kill-server");
-            await _adb.RunCommandAsync("adb", "start-server");
-
-
-            _infoController.DeviceUpdate += async (s, ev) =>
-            {
-                updateDevices();
-            };
-            _adb.DeviceConnectedEvent += async (s, ev) =>
-            {
-                await _adb.AdbStartWebSocketConnectionAsync();
-                updateDevices();
-            };
-            _network.OpenNetworkConnectionEvent += async (s, ev) =>
-            {
-                updateOwnIp();
-                updateDevices();
-            };
+            await ResetAdb();
             _http.OpenServerEvent += async (s, ev, b, f) =>
             {
                 updateListServer(b, f);
             };
-
+            _deviceManager.DeviceAdded += device =>
+            {
+                _UiContext.Post(_ => _adb.DevicesBindingList.Add(device), null);
+            };
+            _deviceManager.DeviceUpdated += device =>
+            {
+                var existing = _adb.DevicesBindingList.FirstOrDefault(d => d.Ip == device.Ip);
+                if (existing != null)
+                    _UiContext.Post(_ => existing.UpdateFromDeviceReport(device), null);
+            };
+            _deviceManager.DeviceRemoved += device =>
+            {
+                var existing = _adb.DevicesBindingList.FirstOrDefault(d => d.Ip == device.Ip);
+                if (existing != null)
+                    _UiContext.Post(_ => _adb.DevicesBindingList.Remove(existing), null);
+            };
             await _network.StartServerNetwork();
             await _websocket.StartAsync();
+        }
+
+        public async Task ResetAdb()
+        {
+            await _adb.RunCommandAsync("adb", "kill-server");
+            await _adb.RunCommandAsync("adb", "start-server");
         }
     }
 }

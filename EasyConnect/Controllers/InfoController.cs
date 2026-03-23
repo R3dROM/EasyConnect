@@ -10,13 +10,10 @@ using System.Windows.Forms;
 
 namespace EasyConnect.Controllers
 {
-    public class InfoController
+    public class InfoController()
     {
-        public event Func<object, EventArgs, Task> DeviceUpdate;
+        public event Func<object, EventArgs, Task>? DeviceUpdate;
 
-        public InfoController()
-        {
-        }
         public virtual async Task OnDeviceUpdate()
         {
             if (DeviceUpdate == null) return;

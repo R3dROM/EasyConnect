@@ -1,40 +1,183 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 
 namespace EasyConnect.Models
 {
-    public class DeviceReport: INotifyPropertyChanged
+    public class DeviceReport : INotifyPropertyChanged
     {
-        public DeviceReport()
-        {
+        public DeviceReport() { }
 
-        }
-        public DeviceReport(string ip) 
+        public DeviceReport(string ip, string? serialNumber = null)
         {
-            deviceId = ip;
-        }
-        public string deviceId { get; set; }
-        public string bundle { get; set; }
-        public string downloadStatus { get; set; } = "waiting";
-        public string installStatus { get; set; } = "waiting";
-        public string currentFile { get; set; } = "-";
-        public long percent { get; set; }
-        public string apkPath { get; set; }
-        public string apkName { get; set; }
-        public long apkSize { get; set; }
-        public long timestamp { get; set; }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string name)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            if (serialNumber != null)
+                SerialNumber = serialNumber;
+            Ip = ip;
         }
 
-        public string DeviceInfoReport() { return $"{deviceId}\t{downloadStatus}\t{currentFile} - {percent}%"; }
+        // ID inmutable
+        private string _ip = "";
+        public string Ip
+        {
+            get => _ip;
+            set
+            {
+                if (_ip != value && value != null)
+                {
+                    _ip = value;
+                    OnPropertyChanged(nameof(Ip));
+                }
+            }
+        }
+        private string? _serialNumber;
+        public string? SerialNumber
+        {
+            get => _serialNumber;
+            set
+            {
+                if (_serialNumber != value && value != null)
+                {
+                    _serialNumber = value;
+                    OnPropertyChanged(nameof(SerialNumber));
+                }
+            }
+        }
+        private int? _battery;
+        public int? Battery
+        {
+            get => _battery;
+            set
+            {
+                if (_battery != value && value != null)
+                {
+                    _battery = value;
+                    OnPropertyChanged(nameof(Battery));
+                }
+            }
+        }
+        private string? _bundle;
+        public string? Bundle
+        {
+            get => _bundle;
+            set
+            {
+                if (_bundle != value && value != null)
+                {
+                    _bundle = value;
+                    OnPropertyChanged(nameof(Bundle));
+                }
+            }
+        }
+        private string? _status = "Connected";
+        public string? Status
+        {
+            get => _status;
+            set
+            {
+                if (_status != value && value != null)
+                {
+                    _status = value;
+                    OnPropertyChanged(nameof(Status));
+                }
+            }
+        }
+        private string? _currentFile = "-";
+        public string? CurrentFile
+        {
+            get => _currentFile;
+            set
+            {
+                if (_currentFile != value && value != null)
+                {
+                    _currentFile = value;
+                    OnPropertyChanged(nameof(CurrentFile));
+                }
+            }
+        }
+        private long? _percent;
+        public long? Percent
+        {
+            get => _percent;
+            set
+            {
+                if (_percent != value && value != null)
+                {
+                    _percent = value;
+                    OnPropertyChanged(nameof(Percent));
+                }
+            }
+        }
+        private string? _apkName;
+        public string? ApkName
+        {
+            get => _apkName;
+            set
+            {
+                if (_apkName != value && value != null)
+                {
+                    _apkName = value;
+                    OnPropertyChanged(nameof(ApkName));
+                }
+            }
+        }
+        private long? _apkSize;
+        public long? ApkSize
+        {
+            get => _apkSize;
+            set
+            {
+                if (_apkSize != value && value != null)
+                {
+                    _apkSize = value;
+                    OnPropertyChanged(nameof(ApkSize));
+                }
+            }
+        }
+        private long? _timestamp;
+        public long? Timestamp
+        {
+            get => _timestamp;
+            set
+            {
+                if (_timestamp != value && value != null)
+                {
+                    _timestamp = value;
+                    OnPropertyChanged(nameof(Timestamp));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        // Actualizar desde un payload externo
+        public void UpdateFromPayload(MessageInfo other)
+        {
+            if (other?.payload == null) return;
+
+            Ip = other.payload.ip;
+            SerialNumber = other.payload.serialNumber;
+            Bundle = other.payload.bundle;
+            Status = other.payload.status;
+            CurrentFile = other.payload.currentFile;
+            Percent = other.payload.percent;
+            ApkName = other.payload.apkName;
+            ApkSize = other.payload.apkSize;
+            Timestamp = other.payload.timestamp;
+            Battery = other.payload.batteryLvl;
+        }
+        public void UpdateFromPc(DeviceReport other)
+        {
+            if (other == null) return;
+
+            Ip = other.Ip;
+            SerialNumber = other.SerialNumber;
+            Bundle = other.Bundle;
+            Status = other.Status;
+            CurrentFile = other.CurrentFile;
+            Percent = other.Percent;
+            ApkName = other.ApkName;
+            ApkSize = other.ApkSize;
+            Timestamp = other.Timestamp;
+        }
     }
 }

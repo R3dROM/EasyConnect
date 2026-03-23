@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -10,17 +11,60 @@ using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class NetworkService
+    public class NetworkService() : INotifyPropertyChanged
     {
-        public event Func<object, EventArgs, Task> OpenNetworkConnectionEvent;
-        public IPAddress[] myIpAddress;
-        public string _serverIp;
-        public string _serverPort = "8000";
-        public string _bundle;
+        public event Func<object, EventArgs, Task>? OpenNetworkConnectionEvent;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        public NetworkService() 
+        private IPAddress[] _myIpAddress = [];
+        public IPAddress[] myIpAddress
         {
+            get => _myIpAddress;
+            set
+            {
+                if (_myIpAddress != value)
+                    _myIpAddress = value;
+                OnPropertyChanged(nameof(myIpAddress));
+                OnPropertyChanged(nameof(MyIPAddressesString));
+            }
+        }
+        public string MyIPAddressesString => myIpAddress.FirstOrDefault() == null ? "" : myIpAddress.FirstOrDefault().ToString();
 
+        private string _serverIp = "";
+        public string serverIp{
+            get => _serverIp;
+            set 
+            {
+                if (_serverIp != value)
+                    _serverIp = value;
+                OnPropertyChanged(nameof(serverIp));
+            }
+        }
+        private string _serverPort = "8000";
+        public string serverPort
+        {
+            get => _serverPort;
+            set
+            {
+                if (_serverPort != value)
+                    _serverPort = value;
+                OnPropertyChanged(nameof(serverPort));
+            }
+        }
+        private string _bundle = "";
+        public string bundle
+        {
+            get => _bundle;
+            set
+            {
+                if (value != _bundle)
+                    _bundle = value;
+                OnPropertyChanged(nameof(bundle));
+            }
+        }
+        protected void OnPropertyChanged(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
         protected virtual async Task OnOpenNetworkEvent()
         {
@@ -34,36 +78,16 @@ namespace EasyConnect.Services
                 await handler(this, EventArgs.Empty);
             }
         }
-
-        // GET DESKTOP/SERVER
         public async Task StartServerNetwork()
         {
-            GetCurrentIp();
-            await OnOpenNetworkEvent();
+            _myIpAddress = GetMyIpAddress();
+            _serverIp = MyIPAddressesString;
         }
-        public IPAddress[] GetCurrentIp()  {
-            myIpAddress = GetMyIpAddress();
-            _serverIp = myIpAddress.FirstOrDefault().ToString();
-            return myIpAddress; 
-        }
-        public string GetServerIp() { return myIpAddress.FirstOrDefault().MapToIPv4().ToString() ?? GetCurrentIp().FirstOrDefault().MapToIPv4().ToString(); }
-        public string GetServerPort() { return _serverPort; }
-        public string GetBundleId() { return _bundle; }
-        // SET DESKTOP/SERVER
-        public void SetCurrentIp(IPAddress[] ipAddress) { myIpAddress = ipAddress; }
-        public void SetServerIp(string ip) { _serverIp = ip; }
-        public void SetServerPort(string port) { _serverPort = port; }
-        public void SetBundleId(string bundle) { _bundle = bundle; }
-
-        public async Task<IPAddress[]> StartAutoConnectionAsync()
+        public async Task<IPAddress[]?> StartAutoConnectionAsync()
         {
-            var _myIpAddress = GetMyIpAddress();
-            var _serverIp = _myIpAddress.FirstOrDefault().ToString();
-            SetCurrentIp(_myIpAddress);
-            SetServerIp(_serverIp);
-            return await NetworkScannerAsync(_myIpAddress);
+            return await NetworkScannerAsync(myIpAddress);
         }
-        public async Task<IPAddress[]> NetworkScannerAsync(IPAddress[] myIpAddress)
+        public async Task<IPAddress[]?> NetworkScannerAsync(IPAddress[] myIpAddress)
         {
             var ipv4 = myIpAddress.FirstOrDefault();
             if (ipv4 == null || !IsLocalAddress(ipv4)) return null;
@@ -76,7 +100,7 @@ namespace EasyConnect.Services
             var endIp = IpToUint(end);
 
             var semaphore = new SemaphoreSlim(50);
-            var tasks = new List<Task<IPAddress>>();
+            var tasks = new List<Task<IPAddress?>>();
             for (uint i = startIp + 1; i < endIp; i++)
             {
                 var ip = UintToIp(i);
@@ -100,20 +124,15 @@ namespace EasyConnect.Services
                 }));
             }
             var results = await Task.WhenAll(tasks);
-
-            return results
-                .Where(r => r != null)
-                .ToArray();
+            return [.. results.Where(r => r != null)];
         }
         public async Task<bool> PingAsync(string ip)
         {
             try
             {
-                using (var ping = new Ping())
-                {
-                    var reply = await ping.SendPingAsync(ip, 1000);
-                    return reply.Status == IPStatus.Success;
-                }
+                using var ping = new Ping();
+                var reply = await ping.SendPingAsync(ip, 1000);
+                return reply.Status == IPStatus.Success;
             }
             catch (Exception ex)
             {
@@ -125,12 +144,10 @@ namespace EasyConnect.Services
         {
             try
             {
-                using (var client = new TcpClient())
-                {
-                    var connectTask = client.ConnectAsync(ip, port);
-                    var completedTask = await Task.WhenAny(connectTask, Task.Delay(2000));
-                    return completedTask == connectTask && client.Connected;
-                }
+                using var client = new TcpClient();
+                var connectTask = client.ConnectAsync(ip, port);
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(2000));
+                return completedTask == connectTask && client.Connected;
             }
             catch (Exception ex)
             {
@@ -143,9 +160,7 @@ namespace EasyConnect.Services
             try
             {
                 var currentIPs =  Dns.GetHostAddresses(Dns.GetHostName());
-                return currentIPs
-                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
-                    .ToArray();
+                return [.. currentIPs.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)];
             }
             catch (Exception ex)
             {
@@ -161,7 +176,7 @@ namespace EasyConnect.Services
                 .Any(a => a.Address.Equals(ip));
         }
         // Obtiene la máscara de subred de una IP local
-        private IPAddress GetSubnetMask(IPAddress address)
+        private IPAddress? GetSubnetMask(IPAddress address)
         {
             foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
             {

@@ -1,31 +1,26 @@
-﻿using EasyConnect.Controllers;
-using EasyConnect.Models;
+﻿using EasyConnect.Models;
 using Fleck;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class WebSocketService
+    public class WebSocketService(NetworkService _NetworkService, AdbService _AdbService, DeviceManager _DeviceManager, ConnectionService _ConnectionService)
     {
-        public  WebSocketServer server;
-        private readonly NetworkService networkService;
-        private readonly AdbService adbService;
-        private List<IWebSocketConnection> webSocketConnection = new List<IWebSocketConnection>();
-        private string serverIp;
-        public WebSocketService(NetworkService _NetworkService, AdbService _AdbService) 
-        {
-            networkService = _NetworkService;
-            adbService = _AdbService;
-        }
+        public  WebSocketServer? server;
+        private readonly ConnectionService connectionService = _ConnectionService;
+        private readonly DeviceManager deviceManager = _DeviceManager;
+        private readonly NetworkService networkService = _NetworkService;
+        private readonly AdbService adbService = _AdbService;
+        private readonly List<IWebSocketConnection> webSocketConnection = [];
+        private string serverIp = "";
+
         public async Task StartAsync()
         {
-            serverIp = networkService.GetServerIp();
+            serverIp = networkService.serverIp;
             server = new WebSocketServer($"ws://{serverIp}:8181");
             await StartWebSocketServer();
         }
@@ -46,27 +41,34 @@ namespace EasyConnect.Services
                     };
                     ws.OnMessage = message =>
                     {
-                        Debug.WriteLine($"{message}");
-                        var jsonMessage = JsonSerializer.Deserialize<MessageInfo>(message);
-                        //Debug.WriteLine(jsonMessage.type);
-                        if (jsonMessage != null && jsonMessage.type == "downloadInformation")
+                        Debug.WriteLine(message);
+                        var deviceUpdated = JsonSerializer.Deserialize<MessageInfo>(message);
+                        if (deviceUpdated != null && deviceUpdated.type == "downloadInformation")
                         {
-                            var result = adbService?.GetDevice(ws.ConnectionInfo.ClientIpAddress);
+                            var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
                             Debug.WriteLine(ws.ConnectionInfo.ClientIpAddress);
-                            if (result != null)
+                            if (result)
                             {
                                 Debug.WriteLine(ws.ConnectionInfo.ClientIpAddress);
-                                DeviceReport deviceUpdate = new DeviceReport();
-                                deviceUpdate.deviceId = jsonMessage.payload.deviceId;
-                                deviceUpdate.apkPath = jsonMessage.payload.apkPath;
-                                deviceUpdate.apkName = jsonMessage.payload.apkName;
-                                deviceUpdate.apkSize = jsonMessage.payload.apkSize;
-                                deviceUpdate.bundle = jsonMessage.payload.bundle;
-                                deviceUpdate.downloadStatus = jsonMessage.payload.status ? "Complete" : "Downloading";
-                                deviceUpdate.percent = jsonMessage.payload.percent;
-                                deviceUpdate.currentFile = jsonMessage.payload.currentFile;
-                                _ = adbService.UpdateDevice(deviceUpdate);
+                                deviceManager.UpdateDevice(deviceUpdated);
                                 Debug.WriteLine(message);
+                            }
+                        }
+                        if (deviceUpdated != null && deviceUpdated.type == "register")
+                        {
+                            var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
+                            if (!result)
+                            {
+                                DeviceReport newDevice = new(deviceUpdated.payload.ip, deviceUpdated.payload.serialNumber);
+                                _ = connectionService.AdbConnectionFromDevice(newDevice);
+                            }
+                        }
+                        if (deviceUpdated != null && deviceUpdated.type == "battery")
+                        {
+                            var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
+                            if (result)
+                            {
+                                deviceManager.UpdateDevice(deviceUpdated);
                             }
                         }
                     };
@@ -84,6 +86,13 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-
+        public async Task StartWebSocketConnectionAsync(string? deviceIp = null)
+        {
+            await adbService.AdbWebSocketConnection(serverIp, deviceIp);
+        }
+        public async Task StopWebSocketConnectionAsync(string? deviceIp = null)
+        {
+            await adbService.AdbStopWebSocketConnection(serverIp, deviceIp);
+        }
     }
 }
