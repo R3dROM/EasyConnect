@@ -9,7 +9,7 @@ namespace EasyConnect.Services
     {
         private readonly DeviceManager _deviceManager;
 
-        private readonly BindingList<DeviceInfo> _devicesBindingList = new();
+        private readonly BindingList<DeviceInfo> _devicesBindingList = [];
         public BindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
 
         public AdbService(DeviceManager deviceManager)
@@ -87,7 +87,7 @@ namespace EasyConnect.Services
                 var (ExitCode, Output) = await RunCommandAsync("adb", $"-s {ip} {arguments}");
                 return new DeviceCommandResult
                 {
-                    DeviceId = ip,
+                    Ip = ip,
                     ExitCode = ExitCode,
                     Output = Output,
                 };
@@ -96,7 +96,7 @@ namespace EasyConnect.Services
             {
                 return new DeviceCommandResult
                 {
-                    DeviceId = ip,
+                    Ip = ip,
                     ExitCode = -1,
                     Output = ex.Message
                 };

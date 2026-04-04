@@ -45,6 +45,8 @@ namespace EasyConnect.Services
                         var deviceUpdated = JsonSerializer.Deserialize<MessageInfo>(message);
                         if (deviceUpdated != null && deviceUpdated.type == "downloadInformation")
                         {
+                            if (deviceUpdated.payload == null)
+                                return;
                             var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
                             Debug.WriteLine(ws.ConnectionInfo.ClientIpAddress);
                             if (result)
@@ -56,6 +58,8 @@ namespace EasyConnect.Services
                         }
                         if (deviceUpdated != null && deviceUpdated.type == "register")
                         {
+                            if (deviceUpdated.payload == null)
+                                return;
                             var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
                             if (!result)
                             {
@@ -65,6 +69,8 @@ namespace EasyConnect.Services
                         }
                         if (deviceUpdated != null && deviceUpdated.type == "battery")
                         {
+                            if (deviceUpdated.payload == null)
+                                return;
                             var result = deviceManager.DevicesDictionary.TryGetValue(deviceUpdated.payload.ip, out var _);
                             if (result)
                             {

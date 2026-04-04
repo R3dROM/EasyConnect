@@ -6,7 +6,12 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>logofast_1774866152014.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="logofast_1774866152014.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Fleck" Version="1.2.0" />

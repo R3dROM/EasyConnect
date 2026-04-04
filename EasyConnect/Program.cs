@@ -17,6 +17,7 @@ namespace EasyConnect
             Application.SetCompatibleTextRenderingDefault(false);
             
             var services = new ServiceCollection();
+            services.AddSingleton<ConsoleService>();
             services.AddSingleton<DeviceManager>();
             services.AddSingleton<DeploymentService>();
             services.AddSingleton<ConnectionService>();
@@ -28,12 +29,17 @@ namespace EasyConnect
             services.AddSingleton<HttpController>();
             services.AddSingleton<AppInitializer>();
             services.AddSingleton<WINDOW>();
+            services.AddSingleton<NetworkingConfiguration>();
+            services.AddSingleton<NetworkConfigurationService>();
 
             ServiceProvider = services.BuildServiceProvider();
 
             var mainForm = ServiceProvider.GetService<WINDOW>();
-            if(mainForm != null)
+            var netConfigForm = ServiceProvider.GetService<NetworkingConfiguration>();
+            if(mainForm != null && netConfigForm != null)
+            {
                 Application.Run(mainForm);
+            }
         }
     }
 }

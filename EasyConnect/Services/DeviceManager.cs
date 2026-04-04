@@ -31,6 +31,8 @@ namespace EasyConnect.Services
         }
         public bool UpdateDevice(MessageInfo device)
         {
+            if (device.payload == null)
+                return false;
             var isUpdate = GetDevice(device.payload.ip, out var existing);
             if (isUpdate)
             {
@@ -69,6 +71,7 @@ namespace EasyConnect.Services
                 {
                     DeviceRemoved?.Invoke(existing);
                     Debug.WriteLine(existing.ToString());
+                    return _devicesDictionary.TryRemove(existing.Ip, out _);
                 }
             }
             return result;

@@ -28,7 +28,7 @@ namespace EasyConnect.Services
                 OnPropertyChanged(nameof(MyIPAddressesString));
             }
         }
-        public string MyIPAddressesString => myIpAddress.FirstOrDefault() == null ? "" : myIpAddress.FirstOrDefault().ToString();
+        public string MyIPAddressesString => myIpAddress.FirstOrDefault() == null ? "" : myIpAddress.FirstOrDefault()!.ToString();
 
         private string _serverIp = "";
         public string serverIp{
@@ -124,14 +124,16 @@ namespace EasyConnect.Services
                 }));
             }
             var results = await Task.WhenAll(tasks);
-            return [.. results.Where(r => r != null)];
+            if (results != null)
+                return [.. results.Where(r => r != null)!];
+            return null;
         }
         public async Task<bool> PingAsync(string ip)
         {
             try
             {
                 using var ping = new Ping();
-                var reply = await ping.SendPingAsync(ip, 1000);
+                var reply = await ping.SendPingAsync(ip, 5000);
                 return reply.Status == IPStatus.Success;
             }
             catch (Exception ex)

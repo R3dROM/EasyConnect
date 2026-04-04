@@ -47,13 +47,13 @@ namespace EasyConnect.Controllers
                     result = await _connectionService.AdbConnectionFromPc();
                 if (result.ExitCode == 0)
                 {
-                    await _websocketService.StartWebSocketConnectionAsync(result.DeviceId);
+                    await _websocketService.StartWebSocketConnectionAsync(result.Ip);
                 }
                 Debug.WriteLine(result.ToString());
             }
             catch (Exception)
             {
-                await _websocketService.StopWebSocketConnectionAsync(result?.DeviceId);
+                await _websocketService.StopWebSocketConnectionAsync(result?.Ip);
                 throw;
             }
         }

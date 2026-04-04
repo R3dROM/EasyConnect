@@ -179,5 +179,6 @@ namespace EasyConnect.Models
             ApkSize = other.ApkSize;
             Timestamp = other.Timestamp;
         }
+        public NetworkConfiguration DeviceReportToNetworkConfig() => new(Ip, SerialNumber??string.Empty);
     }
 }

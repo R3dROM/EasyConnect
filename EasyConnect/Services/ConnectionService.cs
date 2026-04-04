@@ -1,6 +1,7 @@
 ﻿using EasyConnect.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -59,7 +60,7 @@ namespace EasyConnect.Services
             if (result.ExitCode == 0)
             {
                 result = await SerialNumberDevice(_headsetIp);
-                var deviceToUpdate = _deviceManager.GetDevice(result.DeviceId, out var device);
+                var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
                 if (device != null && deviceToUpdate)
                 {
                     device.SerialNumber = result.Output.Trim();
@@ -73,7 +74,7 @@ namespace EasyConnect.Services
             var result = await ConnectDevice($"connect {device.Ip}:{_headsetPort}", device);
             if (result.ExitCode == 0)
             {
-                var deviceToUpdate = _deviceManager.GetDevice(result.DeviceId, out var getDevice);
+                var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var getDevice);
                 if (getDevice != null && deviceToUpdate)
                     _deviceManager.UpdateDeviceFromPC(getDevice);
             }
@@ -103,9 +104,16 @@ namespace EasyConnect.Services
                         return new DeviceCommandResult
                         {
                             ExitCode = -1,
-                            DeviceId = "",
+                            Ip = "",
                             Output = "ERROR al conectar el visor"
                         };
+                    var result = await SerialNumberDevice(output.Ip);
+                    var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var serial);
+                    if (serial != null && deviceToUpdate)
+                    {
+                        serial.SerialNumber = result.Output.Trim();
+                        _deviceManager.UpdateDeviceFromPC(serial);
+                    }
                     return output;
                 }
                 finally
@@ -126,7 +134,7 @@ namespace EasyConnect.Services
                     return new DeviceCommandResult
                     {
                         ExitCode = -1,
-                        DeviceId = "",
+                        Ip = "",
                         Output = "ERROR en la ejecución de comando"
                     };
                 }
@@ -135,14 +143,14 @@ namespace EasyConnect.Services
                     return new DeviceCommandResult
                     {
                         ExitCode = -1,
-                        DeviceId = "",
+                        Ip = "",
                         Output = "ERROR al emparejar el dispositivo " + Output
                     };
                 }
                 return new DeviceCommandResult
                 {
                     ExitCode = ExitCode,
-                    DeviceId = "",
+                    Ip = "",
                     Output = Output
                 };
             }
@@ -161,33 +169,35 @@ namespace EasyConnect.Services
                     return new DeviceCommandResult
                     {
                         ExitCode = -1,
-                        DeviceId = "",
+                        Ip = "",
                         Output = "Dispositivo ya conectado"
                     };
                 var (ExitCode, Output) = await _adbService.RunCommandAsync("adb", $"{arguments}");
                 if (ExitCode != 0)
                 {
+                    _deviceManager.RemoveDevice(device.Ip);
                     throw new Exception("Error al conectar el dispositivo");
                 }
                 if (!ParseAdbConnectResult(Output))
                 {
+                    Debug.WriteLine(_deviceManager.RemoveDevice(device.Ip));
                     throw new Exception($"Conexión fallido {Output}");
                 }
                 return new DeviceCommandResult
                 {
                     ExitCode = 0,
-                    DeviceId = device.Ip,
+                    Ip = device.Ip,
                     Output = Output
                 };
             }
             catch (Exception ex)
             {
-                if (device != null)
-                    _deviceManager.RemoveDevice(device.Ip);
+                if (device != null && _deviceManager.GetDevice(device.Ip, out var deviceToDisconnect))
+                    Debug.WriteLine(_deviceManager.RemoveDevice(deviceToDisconnect!.Ip));
                 return new DeviceCommandResult
                 {
                     ExitCode = -1,
-                    DeviceId = "",
+                    Ip = "",
                     Output = ex.Message
                 };
             }
@@ -204,7 +214,7 @@ namespace EasyConnect.Services
                 return new DeviceCommandResult
                 {
                     ExitCode = 0,
-                    DeviceId = ip,
+                    Ip = ip,
                     Output = OutputSerialNumber
                 };
             }
@@ -215,7 +225,7 @@ namespace EasyConnect.Services
                 return new DeviceCommandResult
                 {
                     ExitCode = -1,
-                    DeviceId = "",
+                    Ip = "",
                     Output = ex.Message
                 };
             }

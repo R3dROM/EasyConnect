@@ -27,8 +27,18 @@ namespace EasyConnect.Services
         }
         public async Task AdbMove(string bundleID)
         {
-            var debug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundleID} " +
-                "/sdcard/Android/data/");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle} /sdcard/Download/");
+            var ch = await _adbService.AdbExecuteOnAllDevices(device => $"shell chmod -R 777 /sdcard/Download/{device.Bundle}/");
+            var debug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Download/{device.Bundle} /sdcard/Android/data/{device.Bundle}");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell rm -r /sdcard/Android/data/com.easyconnect.agent/files/");
+            var moveDebug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/{device.Bundle}/CONFIGS/NetworkingConfiguration.json " +
+            $"/sdcard/Android/data/{device.Bundle}/files/");
+            var rmDebug = await _adbService.AdbExecuteOnAllDevices(device => $"shell rm -r /sdcard/Android/data/{device.Bundle}/CONFIGS");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Download/{device.Bundle}/apk/{device.ApkName} /data/local/tmp/");
+            foreach (var log in ch)
+            {
+                Debug.WriteLine(log.ToString());
+            }
             foreach (var device in debug)
             {
                 Debug.WriteLine(device.ToString());
@@ -77,7 +87,7 @@ namespace EasyConnect.Services
                 async Task<DeviceCommandResult> RunPkg(string cmd)
                 {
                     var result = await
-                        _adbService.ExecuteCommandOnDevice(device.Ip, $"shell cmd package {cmd}");
+                        _adbService.ExecuteCommandOnDevice(device.Ip, $"shell pm {cmd}");
 
                     outputBuilder.AppendLine($"[{cmd}]");
                     outputBuilder.AppendLine(result.Output);
@@ -88,23 +98,18 @@ namespace EasyConnect.Services
                 }
                 if (string.IsNullOrEmpty(device.ApkName) || device.ApkSize <= 0)
                     throw new Exception("APK inválido");
-
-                var move = await _adbService.ExecuteCommandOnDevice(device.Ip, $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName} " +
-                "/data/local/tmp/");
-                if (move.ExitCode != 0)
-                    throw new Exception("Fallo moviendo APK");
                 moveApk = true;
-                var create = await RunPkg($"install-create -r -g -S {device.ApkSize}");
-                sessionId = FindSessionID(create.Output);
-                if (string.IsNullOrEmpty(sessionId) || create.ExitCode != 0)
-                    throw new Exception("Fallo creando la instalacion");
+                //var create = await RunPkg($"install-create -r -g -S {device.ApkSize}");
+                //sessionId = FindSessionID(create.Output);
+                //if (string.IsNullOrEmpty(sessionId) || create.ExitCode != 0)
+                //    throw new Exception("Fallo creando la instalacion");
 
-                await RunPkg($"install-write -S {device.ApkSize} {sessionId} base.apk /data/local/tmp/{device.ApkName}");
-                await RunPkg($"install-commit {sessionId}");
-
+                //await RunPkg($"install-write -S {device.ApkSize} {sessionId} base.apk /data/local/tmp/{device.ApkName}");
+                //await RunPkg($"install-commit {sessionId}");
+                await RunPkg($"install /data/local/tmp/{device.ApkName}");
                 return new DeviceCommandResult
                 {
-                    DeviceId = device.Ip,
+                    Ip = device.Ip,
                     ExitCode = 0,
                     Output = outputBuilder.ToString(),
                 };
@@ -119,7 +124,7 @@ namespace EasyConnect.Services
                         $"/sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName}");
                 return new DeviceCommandResult
                 {
-                    DeviceId = device.Ip,
+                    Ip = device.Ip,
                     ExitCode = -1,
                     Output = $"ERROR INESPERADO {ex.Message}",
                 };

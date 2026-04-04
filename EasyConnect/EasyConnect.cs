@@ -15,7 +15,9 @@ namespace EasyConnect
 {
     public partial class WINDOW : Form
     {
+        private readonly NetworkingConfiguration NetConfig;
         private SynchronizationContext? _UiContext;
+
         private readonly AppInitializer _initializer;
         private readonly DeployController _DeployController;
         private readonly InfoController _InfoController;
@@ -28,6 +30,7 @@ namespace EasyConnect
         private readonly NetworkService _NetworkService;
 
         public WINDOW(
+            NetworkingConfiguration NetConfig,
             NetworkService _NetworkService, WebSocketService _WebSocketService,
             AdbService _AdbService, DeployController _DeployController,
             InfoController _InfoController, HttpController _HttpController,
@@ -36,6 +39,7 @@ namespace EasyConnect
             )
         {
             this.InitializeComponent();
+            this.NetConfig = NetConfig;
             this._DeploymentService = _DeploymentService;
             this._ConnectionService = _ConnectionService;
             this._NetworkService = _NetworkService;
@@ -69,9 +73,7 @@ namespace EasyConnect
                 labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.MyIPAddressesString), false, DataSourceUpdateMode.OnPropertyChanged);
                 dataGridView1.AllowUserToAddRows = false;
                 dataGridView1.AllowUserToDeleteRows = false;
-                dataGridView1.ReadOnly = true;
-                //dataGridView1.DefaultCellStyle.ForeColor = Color.Black;
-                //dataGridView1.DefaultCellStyle.BackColor = Color.White;
+                dataGridView1.ReadOnly = false;
                 dataGridView1.DataSource = _AdbService.DevicesBindingList;
             }
         }
@@ -80,6 +82,8 @@ namespace EasyConnect
             Debug.WriteLine("CLOSING EVERYTING!!");
             _WebSocketService.server?.Dispose();
             _ = _initializer.ResetAdb();
+            _ = _HttpController.StopServerConnection();
+            NetConfig.Close();
             base.OnFormClosing(e);
         }
         private void textBoxIP_TextChanged(object sender, EventArgs e)
@@ -160,6 +164,16 @@ namespace EasyConnect
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
 
+        }
+
+        private async void buttonRESETADB_Click(object sender, EventArgs e)
+        {
+            await _initializer.ResetAdb();
+        }
+
+        private async void buttonNETWORKING_Click(object sender, EventArgs e)
+        {
+            await NetConfig.ShowDialogAsync();
         }
     }
 }
