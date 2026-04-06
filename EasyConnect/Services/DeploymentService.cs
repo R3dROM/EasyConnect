@@ -27,14 +27,17 @@ namespace EasyConnect.Services
         }
         public async Task AdbMove(string bundleID)
         {
-            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle} /sdcard/Download/");
-            var ch = await _adbService.AdbExecuteOnAllDevices(device => $"shell chmod -R 777 /sdcard/Download/{device.Bundle}/");
-            var debug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Download/{device.Bundle} /sdcard/Android/data/{device.Bundle}");
-            await _adbService.AdbExecuteOnAllDevices(device => $"shell rm -r /sdcard/Android/data/com.easyconnect.agent/files/");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell mkdir -p /sdcard/Download/{device.Bundle}/files/");
+
             var moveDebug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/{device.Bundle}/CONFIGS/NetworkingConfiguration.json " +
             $"/sdcard/Android/data/{device.Bundle}/files/");
-            var rmDebug = await _adbService.AdbExecuteOnAllDevices(device => $"shell rm -r /sdcard/Android/data/{device.Bundle}/CONFIGS");
-            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Download/{device.Bundle}/apk/{device.ApkName} /data/local/tmp/");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName} /data/local/tmp/");
+
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/files /sdcard/Download/{device.Bundle}/files/");
+            var ch = await _adbService.AdbExecuteOnAllDevices(device => $"shell chmod -R 774 /sdcard/Download/{device.Bundle}/files/*");
+
+            var debug = await _adbService.AdbExecuteOnAllDevices(device => $"shell mv /sdcard/Download/{device.Bundle} /sdcard/Android/data/{device.Bundle}");
+            await _adbService.AdbExecuteOnAllDevices(device => $"shell rm -r /sdcard/Android/data/com.easyconnect.agent/files/");
             foreach (var log in ch)
             {
                 Debug.WriteLine(log.ToString());
@@ -92,7 +95,8 @@ namespace EasyConnect.Services
                     outputBuilder.AppendLine($"[{cmd}]");
                     outputBuilder.AppendLine(result.Output);
                     if (result.ExitCode != 0)
-                        throw new Exception($"Fallo en: {cmd}");
+                        throw new Exception($"Fallo en: {cmd}." +
+                            $"\n {result.Output}");
 
                     return result;
                 }
@@ -119,9 +123,9 @@ namespace EasyConnect.Services
                 if (!string.IsNullOrEmpty(sessionId))
                     await _adbService.ExecuteCommandOnDevice(device.Ip, $"shell cmd package " +
                         $"install-abandon {sessionId}");
-                if (moveApk)
-                    await _adbService.ExecuteCommandOnDevice(device.Ip, $"shell mv /data/local/tmp/{device.ApkName} " +
-                        $"/sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName}");
+                //if (moveApk)
+                //    await _adbService.ExecuteCommandOnDevice(device.Ip, $"shell mv /data/local/tmp/{device.ApkName} " +
+                //        $"/sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName}");
                 return new DeviceCommandResult
                 {
                     Ip = device.Ip,
