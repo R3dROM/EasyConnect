@@ -1,11 +1,11 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 
 namespace EasyConnect.Models
 {
     public class DeviceReport : INotifyPropertyChanged
     {
-        public DeviceReport() { }
-
+        private readonly ConcurrentDictionary<string, DeviceJobSession> _sessions = new();
         public DeviceReport(string ip, string? serialNumber = null)
         {
             if (serialNumber != null)
@@ -37,6 +37,19 @@ namespace EasyConnect.Models
                 {
                     _serialNumber = value;
                     OnPropertyChanged(nameof(SerialNumber));
+                }
+            }
+        }
+        private string? _deviceId = string.Empty;
+        public string? DeviceId
+        {
+            get => _deviceId;
+            set
+            {
+                if (_deviceId != value && value != null)
+                {
+                    _deviceId = value;
+                    OnPropertyChanged(nameof(DeviceId));
                 }
             }
         }
@@ -171,6 +184,7 @@ namespace EasyConnect.Models
 
             Ip = other.Ip;
             SerialNumber = other.SerialNumber;
+            DeviceId = other.DeviceId;
             Bundle = other.Bundle;
             Status = other.Status;
             CurrentFile = other.CurrentFile;

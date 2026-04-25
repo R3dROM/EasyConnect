@@ -9,41 +9,36 @@ namespace EasyConnect.Controllers
 {
     public class HttpController
         (
-        AdbService adbService, 
-        NetworkService networkService, 
-        InfoController infoController, 
-        ConsoleService _consoleService
+        NetworkService networkService
         )
     {
-        public event Func<object, EventArgs, string, List<Files>, Task>? OpenServerEvent;
-        private readonly AdbService _AdbService = adbService;
-        private readonly InfoController _InfoController = infoController;
         private readonly NetworkService _NetworkServices = networkService;
-        private readonly string caddy = @"C:\Users\UNIVRSE_Santiago\TOOLS\Caddy\caddy_2.10.2_windows_amd64\caddy.exe";
-        private readonly string scriptsPath = @"C:\scripts\generate-manifest.ps1";
+
 
         private HttpListener? _HttpListener;
 
-        protected virtual async Task OnOpenServerEvent(string bundle, List<Files> files)
+        public async Task<DeviceCommandResult> StartServerListener()
         {
-            if (OpenServerEvent == null) return;
-
-            var handlers = OpenServerEvent.GetInvocationList()
-                                           .Cast<Func<object, EventArgs, string, List<Files>, Task>>();
-
-            foreach (var handler in handlers)
+            try
             {
-                await handler(this, EventArgs.Empty, bundle, files);
+                _ = StartListener();
+                return new DeviceCommandResult
+                { 
+                    Ip = _NetworkServices.serverIp,
+                    ExitCode = 0,
+                    Output = "HTTP listener/Handler Service Ready"
+                };
             }
-        }
-        public async Task StartServerConnection()
-        {
-            _ = _consoleService.RunCommandAsync(caddy, $"start --config \"C:\\Users\\UNIVRSE_Santiago\\TOOLS\\Caddy\\caddy_2.10.2_windows_amd64\\Caddyfile");
-            _ = StartServerListener();
-        }
-        public async Task StopServerConnection()
-        {
-            await _consoleService.RunCommandAsync(caddy, $"stop");
+            catch (Exception)
+            {
+                return new DeviceCommandResult
+                {
+                    Ip = _NetworkServices.serverIp,
+                    ExitCode = -1,
+                    Output = "HTTP listener/Handler Service Fail"
+                };
+                throw;
+            }
         }
         public async Task<Manifest?> GetManifestFromServer()
         {
@@ -100,7 +95,7 @@ namespace EasyConnect.Controllers
                 return;
             }
         }
-        private async Task StartServerListener()
+        private async Task StartListener()
         {
             if (_HttpListener != null && _HttpListener.IsListening)
                 return;
@@ -136,21 +131,7 @@ namespace EasyConnect.Controllers
         {
             try
             {
-                if (context.Request.HttpMethod == "POST")
-                {
-                    using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
-                    string body = await reader.ReadToEndAsync();
-
-                    Debug.WriteLine("JSON recibido:");
-                    Debug.WriteLine(body);
-
-                    // Parsear JSON
-                    var deviceReport = JsonSerializer.Deserialize<DeviceReport>(body);
-                    //_AdbService.UpdateDevice(deviceReport);
-
-                    context.Response.StatusCode = 200;
-                }
-                else if (context.Request.HttpMethod == "PUT")
+                if (context.Request.HttpMethod == "PUT")
                 {
                     using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
                     string json = await reader.ReadToEndAsync();
@@ -173,8 +154,8 @@ namespace EasyConnect.Controllers
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
                 context.Response.StatusCode = 500;
+                throw new Exception($"ERROR",ex);
             }
             finally
             {

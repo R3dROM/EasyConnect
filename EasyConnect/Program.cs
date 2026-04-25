@@ -27,18 +27,22 @@ namespace EasyConnect
             services.AddSingleton<WebSocketService>();
             services.AddSingleton<DeployController>();
             services.AddSingleton<HttpController>();
-            services.AddSingleton<AppInitializer>();
+            services.AddSingleton<RootJsonService>();
+            services.AddSingleton<AppManager>();
             services.AddSingleton<WINDOW>();
             services.AddSingleton<NetworkingConfiguration>();
+            services.AddSingleton<JobTrackerService>();
+            services.AddSingleton<Initializer>();
             services.AddSingleton<NetworkConfigurationService>();
 
             ServiceProvider = services.BuildServiceProvider();
 
+            var initializer = ServiceProvider.GetService<Initializer>();
             var mainForm = ServiceProvider.GetService<WINDOW>();
             var netConfigForm = ServiceProvider.GetService<NetworkingConfiguration>();
-            if(mainForm != null && netConfigForm != null)
+            if(mainForm != null && netConfigForm != null && initializer != null)
             {
-                Application.Run(mainForm);
+                Application.Run(initializer);
             }
         }
     }

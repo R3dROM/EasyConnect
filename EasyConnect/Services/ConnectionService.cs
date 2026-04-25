@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class ConnectionService(AdbService adb, DeviceManager deviceManager)
+    public class ConnectionService(AdbService adb, DeviceManager deviceManager, NetworkService networkService)
     {
         private readonly DeviceManager _deviceManager = deviceManager;
         private readonly AdbService _adbService = adb;
@@ -53,41 +53,74 @@ namespace EasyConnect.Services
                     _newDevice = value;
             }
         }
-
-        public async Task<DeviceCommandResult> AdbConnectionFromPc()
+        public async Task<DeviceCommandResult> AdbReset()
         {
-            var result = await ConnectDevice($"connect {_headsetIp}:{_headsetPort}");
+            var result = await _adbService.ResetAdb();
             if (result.ExitCode == 0)
             {
-                result = await SerialNumberDevice(_headsetIp);
-                var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
-                if (device != null && deviceToUpdate)
-                {
-                    device.SerialNumber = result.Output.Trim();
-                    _deviceManager.UpdateDeviceFromPC(device);
-                }
+                _deviceManager.RemoveAll();
             }
             return result;
         }
+        public async Task<DeviceCommandResult> AdbConnectionFromPc(IProgress<ProgressStatus> progress)
+        {
+            try
+            {
+                return await ProgressStatus.Step(progress, 0, 100, "CONNECTING DEVICE", $"Trying to connect to {_headsetIp}:{_headsetPort}", " Connection Service End",
+                    async () =>
+                    {
+                        var result = await _adbService.ConnectDevice(_headsetIp, $"connect {_headsetIp}:{_headsetPort}");
+                        if (result.ExitCode != 0)
+                            return result;
+                        var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
+                        if (device != null && deviceToUpdate)
+                        {
+                            var serial = await _adbService.SerialNumberDevice(_headsetIp);
+                            device.SerialNumber = serial.Output.Trim();
+                            var dev = RootJsonService.Get(device.SerialNumber);
+                            if (dev != null)
+                            {
+                                Debug.WriteLine(dev.Number);
+                                if (dev.Number.StartsWith('0'))
+                                    dev.Number = dev.Number.Remove(0, 1);
+                                Debug.WriteLine(dev.Number);
+                                device.DeviceId = dev.Number;
+                            }
+                            //device.DeviceId = await networkService.GetDeviceIdFromManifest(device.SerialNumber);
+                            await _deviceManager.UpdateDeviceFromPC(device);
+                        }
+                        return new DeviceCommandResult
+                        {
+                            Ip = result.Ip,
+                            ExitCode = result.ExitCode,
+                            Output = result.Output
+                        };
+                    });
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
         public async Task<DeviceCommandResult> AdbConnectionFromDevice(DeviceReport device)
         {
-            var result = await ConnectDevice($"connect {device.Ip}:{_headsetPort}", device);
+            var result = await _adbService.ConnectDevice(device.Ip, $"connect {device.Ip}:{_headsetPort}", device);
             if (result.ExitCode == 0)
             {
                 var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var getDevice);
                 if (getDevice != null && deviceToUpdate)
-                    _deviceManager.UpdateDeviceFromPC(getDevice);
+                    await _deviceManager.UpdateDeviceFromPC(getDevice);
             }
             return result;
         }
         public async Task<DeviceCommandResult> AdbPair()
         {
-            var result = await PairDevice($"pair {_headsetIp}:{_headsetPort} {_headsetCode}");
+            var result = await _adbService.PairDevice($"pair {_headsetIp}:{_headsetPort} {_headsetCode}");
             if (result.ExitCode != 0)
             {
                 return result;
             }
-            return await ConnectDevice($"connect {_headsetIp}:{_headsetPort}");
+            return await _adbService.ConnectDevice(_headsetIp, $"connect {_headsetIp}:{_headsetPort}");
         }
         public async Task<List<DeviceCommandResult>> ConnectMultipleDevices(IPAddress[] ipAddresses)
         {
@@ -107,12 +140,12 @@ namespace EasyConnect.Services
                             Ip = "",
                             Output = "ERROR al conectar el visor"
                         };
-                    var result = await SerialNumberDevice(output.Ip);
+                    var result = await _adbService.SerialNumberDevice(output.Ip);
                     var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var serial);
                     if (serial != null && deviceToUpdate)
                     {
                         serial.SerialNumber = result.Output.Trim();
-                        _deviceManager.UpdateDeviceFromPC(serial);
+                        await _deviceManager.UpdateDeviceFromPC(serial);
                     }
                     return output;
                 }
@@ -123,128 +156,6 @@ namespace EasyConnect.Services
             });
             var result = await Task.WhenAll(tasks);
             return [.. result];
-        }
-        private async Task<DeviceCommandResult> PairDevice(string arguments)
-        {
-            try
-            {
-                var (ExitCode, Output) = await _adbService.RunCommandAsync("adb", $"{arguments}");
-                if (ExitCode != 0)
-                {
-                    return new DeviceCommandResult
-                    {
-                        ExitCode = -1,
-                        Ip = "",
-                        Output = "ERROR en la ejecución de comando"
-                    };
-                }
-                if (!ParseAdbPairingResult(Output))
-                {
-                    return new DeviceCommandResult
-                    {
-                        ExitCode = -1,
-                        Ip = "",
-                        Output = "ERROR al emparejar el dispositivo " + Output
-                    };
-                }
-                return new DeviceCommandResult
-                {
-                    ExitCode = ExitCode,
-                    Ip = "",
-                    Output = Output
-                };
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-        }
-        private async Task<DeviceCommandResult> ConnectDevice(string arguments, DeviceReport? device = null)
-        {
-            try
-            {
-                device ??= new DeviceReport(_headsetIp);
-                if (!_deviceManager.AddDevice(device))
-                    return new DeviceCommandResult
-                    {
-                        ExitCode = -1,
-                        Ip = "",
-                        Output = "Dispositivo ya conectado"
-                    };
-                var (ExitCode, Output) = await _adbService.RunCommandAsync("adb", $"{arguments}");
-                if (ExitCode != 0)
-                {
-                    _deviceManager.RemoveDevice(device.Ip);
-                    throw new Exception("Error al conectar el dispositivo");
-                }
-                if (!ParseAdbConnectResult(Output))
-                {
-                    Debug.WriteLine(_deviceManager.RemoveDevice(device.Ip));
-                    throw new Exception($"Conexión fallido {Output}");
-                }
-                return new DeviceCommandResult
-                {
-                    ExitCode = 0,
-                    Ip = device.Ip,
-                    Output = Output
-                };
-            }
-            catch (Exception ex)
-            {
-                if (device != null && _deviceManager.GetDevice(device.Ip, out var deviceToDisconnect))
-                    Debug.WriteLine(_deviceManager.RemoveDevice(deviceToDisconnect!.Ip));
-                return new DeviceCommandResult
-                {
-                    ExitCode = -1,
-                    Ip = "",
-                    Output = ex.Message
-                };
-            }
-        }
-        private async Task<DeviceCommandResult> SerialNumberDevice(string ip)
-        {
-            try
-            {
-                var (ExitCodeSerialNumber, OutputSerialNumber) = await _adbService.RunCommandAsync("adb", $"-s {ip} shell getprop ro.serialno");
-                if (ExitCodeSerialNumber != 0)
-                {
-                    throw new Exception("ERROR al obtener el serial number del dispositivo");
-                }
-                return new DeviceCommandResult
-                {
-                    ExitCode = 0,
-                    Ip = ip,
-                    Output = OutputSerialNumber
-                };
-            }
-            catch (Exception ex)
-            {
-                _deviceManager.RemoveDevice(ip);
-                await _adbService.RunCommandAsync("adb", $"disconnect {ip}");
-                return new DeviceCommandResult
-                {
-                    ExitCode = -1,
-                    Ip = "",
-                    Output = ex.Message
-                };
-            }
-        }
-        private bool ParseAdbConnectResult(string output)
-        {
-            if (output.Contains("connected to", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            if (output.Contains("unable to connect", StringComparison.CurrentCultureIgnoreCase) || string.IsNullOrEmpty(output) || output.Contains("failure", StringComparison.CurrentCultureIgnoreCase))
-                return false;
-            return false;
-        }
-        private bool ParseAdbPairingResult(string output)
-        {
-            if (output.Contains("paired to", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            if (!string.IsNullOrEmpty(output))
-                return false;
-            return false;
         }
     }
 }

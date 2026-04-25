@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace EasyConnect.Services
 {
-    public class DeviceManager
+    public class DeviceManager(NetworkService _networkService)
     {
         public event Action<DeviceInfo>? DeviceAdded;
         public event Action<DeviceReport>? DeviceUpdated;
@@ -14,7 +14,6 @@ namespace EasyConnect.Services
         private readonly ConcurrentDictionary<string, DeviceReport> _devicesDictionary = new();
         public ConcurrentDictionary<string, DeviceReport> DevicesDictionary => _devicesDictionary;
 
-        public DeviceManager() { }
 
         public bool AddDevice(DeviceReport device)
         {
@@ -39,17 +38,20 @@ namespace EasyConnect.Services
                 existing?.UpdateFromPayload(device);
                 if (existing != null)
                     DeviceUpdated?.Invoke(existing);
+
             }
             return isUpdate;
         }
-        public bool UpdateDeviceFromPC(DeviceReport device)
+        public async Task<bool> UpdateDeviceFromPC(DeviceReport device)
         {
             var isUpdate = GetDevice(device.Ip, out var existing);
             if (isUpdate)
             {
                 existing?.UpdateFromPc(device);
                 if (existing != null)
+                {
                     DeviceUpdated?.Invoke(existing);
+                }
             }
             return isUpdate;
         }
@@ -75,6 +77,25 @@ namespace EasyConnect.Services
                 }
             }
             return result;
+        }
+        public void RemoveAll()
+        {
+            try
+            {
+                foreach (var device in _devicesDictionary.Values)
+                {
+                    RemoveDevice(device.Ip);
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                _devicesDictionary.Clear();
+            }
         }
         public bool GetDevice(string deviceId, out DeviceReport? result)
         {

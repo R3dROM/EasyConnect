@@ -10,7 +10,7 @@ namespace EasyConnect.Models
 
         public override string ToString()
         {
-            return $"Device ID: {Ip} \nExitCode: {ExitCode} \nOutput: {Output}";
+            return $"Device ID: {Ip} \tExitCode: {ExitCode} \tOutput: {Output}";
         }
     }
 }

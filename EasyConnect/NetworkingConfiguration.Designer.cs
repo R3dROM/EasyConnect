@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NetworkingConfiguration));
             dataGridView1 = new DataGridView();
             textBoxEXPMANAGERIP = new TextBox();
             labelEXPERIENCEMANAGER = new Label();
@@ -91,7 +92,8 @@
             Controls.Add(labelEXPERIENCEMANAGER);
             Controls.Add(textBoxEXPMANAGERIP);
             Controls.Add(dataGridView1);
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            Font = new Font("Yu Gothic UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "NetworkingConfiguration";
             Text = "NetworkingConfiguration";
             Load += NetworkingConfiguration_Load;

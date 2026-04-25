@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EasyConnect.Models;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,16 +7,103 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class NetworkService() : INotifyPropertyChanged
+    public class NetworkService(ConsoleService _consoleService ) : INotifyPropertyChanged
     {
-        public event Func<object, EventArgs, Task>? OpenNetworkConnectionEvent;
+        private readonly ConsoleService _consoleService = _consoleService;
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        private Manifest? _manifest = null;
+        public Manifest? Manifest
+        {
+            get => _manifest;
+            set
+            {
+                if (_manifest != value)
+                {
+                    _manifest = value;
+                }
+            }
+        }
+        private string _manifestScriptsPath = string.Empty;
+        public string ManifestScriptsPath
+        {
+            get => _manifestScriptsPath;
+            set
+            {
+                if (_manifestScriptsPath != value)
+                {
+                    _manifestScriptsPath = value;
+                }
+            }
+        }
+        private string _deployPath = string.Empty;
+        public string DeployPath
+        {
+            get => _deployPath;
+            set
+            {
+                if (_deployPath != value)
+                {
+                    _deployPath = value;
+                }
+            }
+        }
+        private string _caddyExe = string.Empty;
+        public string CaddyExe
+        {
+            get => _caddyExe;
+            set
+            {
+                if (_caddyExe != value)
+                {
+                    _caddyExe = value;
+                }
+            }
+        }
+        private string _caddyFile = string.Empty;
+        public string CaddyFile
+        {
+            get => _caddyFile;
+            set
+            {
+                if (_caddyFile != value)
+                {
+                    _caddyFile = value;
+                }
+            }
+        }
+        private string _caddyPath = string.Empty;
+        public string CaddyPath
+        {
+            get => _caddyPath;
+            set
+            {
+                if (_caddyPath != value)
+                {
+                    _caddyPath = value;
+                    _caddyExe = Path.Combine(_caddyPath, "caddy.exe");
+                    _caddyFile = Path.Combine(_caddyPath, "Caddyfile");
+                }
+            }
+        }
+        private string _deviceListPath = string.Empty;
+        public string DeviceListPath
+        {
+            get => _deviceListPath;
+            set
+            {
+                if (value != _deviceListPath)
+                {
+                    _deviceListPath= value;
+                }
+            }
+        }
         private IPAddress[] _myIpAddress = [];
         public IPAddress[] myIpAddress
         {
@@ -66,22 +154,104 @@ namespace EasyConnect.Services
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
-        protected virtual async Task OnOpenNetworkEvent()
+        public async Task StopServerConnection()
         {
-            if (OpenNetworkConnectionEvent == null) return;
-
-            var handlers = OpenNetworkConnectionEvent.GetInvocationList()
-                                           .Cast<Func<object, EventArgs, Task>>();
-
-            foreach (var handler in handlers)
+            await _consoleService.RunCommandAsync(_caddyExe, $"stop");
+        }
+        public async Task PUTConfigLocal(string json, string path)
+        {
+            using HttpClient client = new();
+            try
             {
-                await handler(this, EventArgs.Empty);
+                string url = Path.Combine(DeployPath, path);
+                await File.WriteAllTextAsync(url, json);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR EN EL PUT: {ex.Message}");
+                return;
             }
         }
-        public async Task StartServerNetwork()
+        public async Task<Manifest?> GetManifestFromLocal()
         {
-            _myIpAddress = GetMyIpAddress();
-            _serverIp = MyIPAddressesString;
+            try
+            {
+                string url = Path.Combine(DeployPath, "manifest.json");
+                var json = await File.ReadAllTextAsync(url);
+                if (json == null)
+                    return null;
+                var files = JsonSerializer.Deserialize<Manifest>(json);
+                return files;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return null;
+            }
+        }
+        public async Task GenerateManifest()
+        {
+            var manifestScriptPath = Path.Combine(ManifestScriptsPath, "generate-manifest.ps1");
+            var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{manifestScriptPath}\" \"{DeployPath}\"");
+
+            Manifest = await GetManifestFromLocal();
+            if (Manifest != null)
+            {
+                bundle = Manifest.bundle;
+            }
+            Debug.WriteLine(result.Output);
+        }
+        public async Task<string> GetDeviceIdFromManifest(string serialNumber)
+        {
+            if (Manifest == null)
+                return "";
+            foreach (var item in Manifest.netConfigs)
+            {
+                if (item.serialNumber == serialNumber)
+                    return item.deviceId;
+            }
+            return "";
+        }
+        public async Task GetDeviceIdFromDeviceListPath()
+        {
+            if (!string.IsNullOrEmpty(_deviceListPath))
+            {
+                var deviceListString = await File.ReadAllTextAsync(_deviceListPath);
+                if (deviceListString != null)
+                {
+                    await RootJsonService.LoadJsonFile(deviceListString);
+                }
+            }
+        }
+        public async Task<DeviceCommandResult> StartServerNetwork()
+        {
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    _myIpAddress = GetMyIpAddress();
+                    _serverIp = MyIPAddressesString;
+                    await GenerateManifest();
+                    await GetDeviceIdFromDeviceListPath();
+                    _ = _consoleService.RunCommandAsync(_caddyExe, $"start --config {_caddyFile}");
+                });
+                return new DeviceCommandResult
+                {
+                    Ip = _serverIp,
+                    ExitCode = 0,
+                    Output = "Network Service Ready"
+                };
+            }
+            catch (Exception)
+            {
+                return new DeviceCommandResult
+                {
+                    Ip = _serverIp,
+                    ExitCode = -1,
+                    Output = "Network Service Fail"
+                };
+                throw;
+            }
         }
         public async Task<IPAddress[]?> StartAutoConnectionAsync()
         {

@@ -7,37 +7,45 @@ using System.Text.Json;
 
 namespace EasyConnect.Services
 {
-    public class NetworkConfigurationService(DeviceManager _deviceManager, ConsoleService _consoleService, HttpController _httpController)
+    public class NetworkConfigurationService(
+        NetworkService _networkService,
+        AdbService _adbService)
     {
+        private readonly AdbService _adbService = _adbService;
+        private readonly NetworkService _networkService = _networkService;
+        private Manifest? _manifest = null;
+        public Manifest? Manifest
+        {
+            get => _manifest;
+            set
+            {
+                if (_manifest != value)
+                {
+                    _manifest = value;
+                }
+            }
+        }
         private readonly BindingList<NetworkConfiguration> _netConfigsBindingList = [];
         public BindingList<NetworkConfiguration> NetConfigsBindingList => _netConfigsBindingList;
 
-        public string experienceServerIp = string.Empty;
-        private readonly string creationPath = @"C:\Users\UNIVRSE_Santiago\TOOLS\tmp";
-        private readonly string scriptsPath = @"C:\scripts\generate-manifest.ps1";
-
-        public async void StartNetConfigDevices()
+        private string _experienceServerIp = string.Empty;
+        public string ExperienceServerIp
         {
-            NetConfigsBindingList.Clear();
-            var devices = _deviceManager.DevicesDictionary;
-            var Manifest = await _httpController.GetManifestFromServer();
-            //devices.TryGetValue(NetConfigs)
-            foreach (var item in devices)
+            get => _experienceServerIp;
+            set
             {
-                var netConfig = item.Value.DeviceReportToNetworkConfig();
-                if (Manifest != null)
+                if (_experienceServerIp != value)
                 {
-                    Debug.WriteLine("Configs found!");
-                    var serial = Manifest.netConfigs.FirstOrDefault(d => d.serialNumber == item.Value.SerialNumber);
-                    if (serial != null)
-                        netConfig.DeviceId = serial.deviceId;
+                    _experienceServerIp = value;
                 }
-                NetConfigsBindingList.Add(netConfig);
             }
         }
+
         public async Task GenerateNetworkingConfigurationJson()
         {
-            JsonSerializerOptions options = new() { WriteIndented = true }; foreach (var item in _netConfigsBindingList)
+            JsonSerializerOptions options = new() { WriteIndented = true };
+            var snapshot = _adbService.DevicesBindingList.ToList();
+            foreach (var item in snapshot)
             {
                 var config = new 
                 { 
@@ -45,21 +53,15 @@ namespace EasyConnect.Services
                     DisplayName = item.DeviceId, 
                     UserGroup = "Default", 
                     Port = "7777", 
-                    Ip = experienceServerIp, 
+                    Ip =  ExperienceServerIp, 
                     IpSecondary = "", 
                     SecondsToCkick = "4" 
                 }; 
-                string json = JsonSerializer.Serialize(config, options); 
-                string rutaArchivo = Path.Combine(creationPath, $"{item.SerialNumber}.json");
-                //File.WriteAllText(rutaArchivo, json);
-                await _httpController.PUTConfigToServer(json, @$"CONFIGS\{item.SerialNumber}.json"); 
-            } 
-            var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptsPath}\" \"C:\\Users\\UNIVRSE_Santiago\\TOOLS\\DEPLOY\""); 
-            Debug.WriteLine(result.Output); 
-        }
-        public async Task SendNetworkingConfigurationToServer()
-        {
-            
+                string json = JsonSerializer.Serialize(config, options);
+                await _networkService.PUTConfigLocal(json, $@"CONFIGS\{item.SerialNumber}.json");
+                //await _httpController.PUTConfigToServer(json, @$"CONFIGS\{item.SerialNumber}.json"); 
+            }
+            await _networkService.GenerateManifest();
         }
     }
 }

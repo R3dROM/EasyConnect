@@ -12,17 +12,16 @@ namespace EasyConnect
 {
     public partial class NetworkingConfiguration : Form
     {
-        private readonly NetworkConfigurationService _configuration;
-        public NetworkingConfiguration(NetworkConfigurationService _configuration)
+        public NetworkingConfiguration()
         {
             InitializeComponent();
-            this._configuration = _configuration;
+            //this._configuration = _configuration;
         }
 
         private async void NetworkingConfiguration_Load(object sender, EventArgs e)
         {
-            dataGridView1.DataSource = _configuration.NetConfigsBindingList;
-            _configuration.StartNetConfigDevices();
+            //dataGridView1.DataSource = _configuration.NetConfigsBindingList;
+            //_configuration.StartNetConfigDevices();
         }
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -32,12 +31,12 @@ namespace EasyConnect
 
         private async void buttonGENERATE_Click(object sender, EventArgs e)
         {
-            await _configuration.GenerateNetworkingConfigurationJson();
+            //await _configuration.GenerateNetworkingConfigurationJson();
         }
 
         private void textBoxEXPMANAGERIP_TextChanged(object sender, EventArgs e)
         {
-            _configuration.experienceServerIp = textBoxEXPMANAGERIP.Text;
+            //_configuration.ExperienceServerIp = textBoxEXPMANAGERIP.Text;
         }
     }
 }

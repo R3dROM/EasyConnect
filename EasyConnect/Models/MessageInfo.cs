@@ -12,7 +12,7 @@ namespace EasyConnect.Models
     [Serializable]
     public class WebSocketInformation
     {
-        public string ip { get; set; } = "";
+        public string ip { get; set; } = string.Empty;
         public string? serialNumber { get; set; }
         public int? batteryLvl {  get; set; }
         public string? status { get; set; }

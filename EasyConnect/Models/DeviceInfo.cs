@@ -35,6 +35,19 @@ namespace EasyConnect.Models
                 }
             }
         }
+        private string? deviceId;
+        public string? DeviceId
+        {
+            get => deviceId;
+            set
+            {
+                if (deviceId != value)
+                {
+                    deviceId = value;
+                    OnPropertyChanged(nameof(DeviceId));
+                }
+            }
+        }
         private string? _status;
         public string? Status
         {
@@ -86,6 +99,7 @@ namespace EasyConnect.Models
 
             Ip = deviceReport.Ip;
             SerialNumber = deviceReport.SerialNumber;
+            DeviceId = deviceReport.DeviceId;
             Status = deviceReport.Status;
             Percent = deviceReport.Percent;
 
