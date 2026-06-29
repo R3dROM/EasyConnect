@@ -49,7 +49,7 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(121, 124);
+            label2.Location = new Point(121, 102);
             label2.Name = "label2";
             label2.Size = new Size(143, 20);
             label2.TabIndex = 1;
@@ -58,7 +58,7 @@
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(121, 157);
+            label3.Location = new Point(121, 135);
             label3.Name = "label3";
             label3.Size = new Size(94, 20);
             label3.TabIndex = 2;
@@ -67,7 +67,7 @@
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(121, 91);
+            label4.Location = new Point(121, 69);
             label4.Name = "label4";
             label4.Size = new Size(88, 20);
             label4.TabIndex = 3;
@@ -77,7 +77,7 @@
             // 
             caddyPath.BackColor = SystemColors.Window;
             caddyPath.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            caddyPath.Location = new Point(270, 84);
+            caddyPath.Location = new Point(270, 62);
             caddyPath.Name = "caddyPath";
             caddyPath.ReadOnly = true;
             caddyPath.Size = new Size(270, 27);
@@ -85,7 +85,7 @@
             // 
             // buttonCaddyPath
             // 
-            buttonCaddyPath.Location = new Point(546, 82);
+            buttonCaddyPath.Location = new Point(546, 60);
             buttonCaddyPath.Name = "buttonCaddyPath";
             buttonCaddyPath.Size = new Size(94, 29);
             buttonCaddyPath.TabIndex = 5;
@@ -95,7 +95,7 @@
             // 
             // buttonManifestPath
             // 
-            buttonManifestPath.Location = new Point(546, 115);
+            buttonManifestPath.Location = new Point(546, 93);
             buttonManifestPath.Name = "buttonManifestPath";
             buttonManifestPath.Size = new Size(94, 29);
             buttonManifestPath.TabIndex = 9;
@@ -107,7 +107,7 @@
             // 
             manifestPath.BackColor = SystemColors.Window;
             manifestPath.Font = new Font("Segoe UI", 9F);
-            manifestPath.Location = new Point(270, 117);
+            manifestPath.Location = new Point(270, 95);
             manifestPath.Name = "manifestPath";
             manifestPath.ReadOnly = true;
             manifestPath.Size = new Size(270, 27);
@@ -117,7 +117,7 @@
             // 
             deployPath.BackColor = SystemColors.Window;
             deployPath.Font = new Font("Segoe UI", 9F);
-            deployPath.Location = new Point(270, 150);
+            deployPath.Location = new Point(270, 128);
             deployPath.Name = "deployPath";
             deployPath.ReadOnly = true;
             deployPath.Size = new Size(270, 27);
@@ -125,7 +125,7 @@
             // 
             // buttonDeployPath
             // 
-            buttonDeployPath.Location = new Point(546, 150);
+            buttonDeployPath.Location = new Point(546, 128);
             buttonDeployPath.Name = "buttonDeployPath";
             buttonDeployPath.Size = new Size(94, 29);
             buttonDeployPath.TabIndex = 11;
@@ -162,11 +162,11 @@
             // 
             // buttonMdmFile
             // 
-            buttonMdmFile.Location = new Point(546, 185);
+            buttonMdmFile.Location = new Point(546, 163);
             buttonMdmFile.Name = "buttonMdmFile";
             buttonMdmFile.Size = new Size(94, 29);
             buttonMdmFile.TabIndex = 17;
-            buttonMdmFile.Text = "MDM";
+            buttonMdmFile.Text = "Browse";
             buttonMdmFile.UseVisualStyleBackColor = true;
             buttonMdmFile.Click += buttonMdmFile_Click;
             // 
@@ -174,7 +174,7 @@
             // 
             devicesList.BackColor = SystemColors.Window;
             devicesList.Font = new Font("Segoe UI", 9F);
-            devicesList.Location = new Point(270, 187);
+            devicesList.Location = new Point(270, 165);
             devicesList.Name = "devicesList";
             devicesList.ReadOnly = true;
             devicesList.Size = new Size(270, 27);
@@ -183,7 +183,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(121, 190);
+            label1.Location = new Point(121, 168);
             label1.Name = "label1";
             label1.Size = new Size(123, 20);
             label1.TabIndex = 19;

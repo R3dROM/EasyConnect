@@ -28,12 +28,36 @@ namespace EasyConnect.Services
             _sessions[jobId].Completion = tcs;
             return tcs.Task;
         }
+        public Task<DeviceJobResult> WaitForRegistration(string jobId, TimeSpan timeout, Action onTimeout)
+        {
+            var tcs = new TaskCompletionSource<DeviceJobResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            _sessions[jobId].Completion = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+
+            cts.Token.Register(() =>
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        onTimeout?.Invoke();
+                    }
+                    finally
+                    {
+                        tcs.TrySetException(
+                            new TimeoutException($"Job {jobId} timed out."));
+                    }
+                });
+            });
+            tcs.Task.ContinueWith(_ => cts.Dispose());
+            return tcs.Task;
+        }
         public void Complete(DeviceJobResult result)
         {
-            Debug.WriteLine($"Jobs: {_sessions.Count}");
             if (_sessions.TryRemove(result.JobId, out var session))
                 session.Completion.TrySetResult(result);
-            Debug.WriteLine($"Jobs: {_sessions.Count}");
         }
     }
 }

@@ -41,27 +41,42 @@ namespace EasyConnect.Services
             }
         }
 
-        public async Task GenerateNetworkingConfigurationJson()
+        public async Task GenerateNetworkingConfigurationJson(IProgress<ProgressStatus> progress)
         {
-            JsonSerializerOptions options = new() { WriteIndented = true };
-            var snapshot = _adbService.DevicesBindingList.ToList();
-            foreach (var item in snapshot)
-            {
-                var config = new 
-                { 
-                    DeviceId = item.DeviceId, 
-                    DisplayName = item.DeviceId, 
-                    UserGroup = "Default", 
-                    Port = "7777", 
-                    Ip =  ExperienceServerIp, 
-                    IpSecondary = "", 
-                    SecondsToCkick = "4" 
-                }; 
-                string json = JsonSerializer.Serialize(config, options);
-                await _networkService.PUTConfigLocal(json, $@"CONFIGS\{item.SerialNumber}.json");
-                //await _httpController.PUTConfigToServer(json, @$"CONFIGS\{item.SerialNumber}.json"); 
-            }
-            await _networkService.GenerateManifest();
+            await ProgressStatus.Step(
+                progress,
+                0,
+                100,
+                "GENERATING",
+                "Generating configuration",
+                "Configuration generated",
+                async () =>
+                {
+                    JsonSerializerOptions options = new() { WriteIndented = true };
+                    var snapshot = _adbService.DevicesBindingList.ToList();
+                    foreach (var item in snapshot)
+                    {
+                        var config = new
+                        {
+                            DeviceId = item.DeviceId,
+                            DisplayName = item.DeviceId,
+                            UserGroup = "Default",
+                            Port = "7777",
+                            Ip = ExperienceServerIp,
+                            IpSecondary = "",
+                            SecondsToCkick = "4"
+                        };
+                        string json = JsonSerializer.Serialize(config, options);
+                        await _networkService.PUTConfigLocal(json, "CONFIGS", $"{item.SerialNumber}.json");
+                    }
+                    await _networkService.GenerateManifest();
+                    return new DeviceCommandResult
+                    {
+                        Ip = "127.0.0.1",
+                        ExitCode = 0,
+                        Output = "Configuration Success",
+                    };
+                });
         }
     }
 }

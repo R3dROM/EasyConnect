@@ -14,67 +14,96 @@ namespace EasyConnect.Controllers
         ConnectionService connectionService,
         NetworkService networkService,
         WebSocketService websocketService,
-        DeploymentService deploymentService)
+        DeploymentService deploymentService,
+        DeviceManager deviceManager)
     {
+        private readonly DeviceManager _deviceManager = deviceManager;
         private readonly ConnectionService _connectionService = connectionService;
         private readonly NetworkService _networkService = networkService;
         private readonly WebSocketService _websocketService = websocketService;
         private readonly DeploymentService _deploymentService = deploymentService;
 
-        public async Task StartDeployment(IProgress<ProgressStatus> progress)
+        private async Task SemaphoreTask(Func<DeviceReport, Task> awaitableAction, IProgress<ProgressStatus> progress, int maxDevices)
         {
-            await ProgressStatus.Step(
-                progress,
-                0, 100,
-                "DEPLOY",
-                $"Starting deployment process of {_networkService.bundle}",
-                "Deployment Services End",
-                async () => {
-                    await StartDownload(progress);
-                    await StartMove(progress);
-                    await StartInstaller(progress);
-                    return true;
-                });
+            var snapshot = _deviceManager.DevicesDictionary.ToArray();
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await awaitableAction(d.Value);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
         }
-        public async Task StartDownload(IProgress<ProgressStatus> progress)
+        public async Task StartUninstall(IProgress<ProgressStatus> progress, int maxDevices)
         {
-            await ProgressStatus.MessageStatus(progress, "DOWNLOAD", "START DOWNLOAD PROCESS");
-            var serverIp = _networkService.serverIp;
-            var serverPort = _networkService.serverPort;
-            await _deploymentService.AdbDownload(serverIp, serverPort, progress);
-            await ProgressStatus.MessageStatus(progress, "DOWNLOAD", "FINISH DOWNLOAD PROCESS");
+            //await SemaphoreTask(_deploymentService.UninstallAsync)
+            var snapshot = _deviceManager.DevicesDictionary.ToArray();
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await _deploymentService.UninstallAsync(d.Value);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
         }
-        public async Task StartMove(IProgress<ProgressStatus> progress)
+        public async Task StartDeployment(IProgress<ProgressStatus> progress, int maxDevices)
         {
-            await ProgressStatus.MessageStatus(progress, "MOVE", "START MOVE PROCESS");
-            var bundle = _networkService.bundle;
-            await _deploymentService.AdbMove(progress, bundle);
-            await ProgressStatus.MessageStatus(progress, "MOVE", "FINISH MOVE PROCESS");
-        }
-        public async Task StartInstaller(IProgress<ProgressStatus> progress)
-        {
-            await ProgressStatus.MessageStatus(progress, "INSTALL", "START INSTALLING PROCESS");
-            await _deploymentService.AdbInstall(progress);
-            await ProgressStatus.MessageStatus(progress, "INSTALL", "FINISH INSTALLING PROCESS");
-        }
-        public async Task StartUninstaller(IProgress<ProgressStatus> progress)
-        {
-            await ProgressStatus.MessageStatus(progress, "UNINSTALL", "START UNINSTALLING PROCESS");
-            await _deploymentService.AdbUninstall(progress);
-            await ProgressStatus.MessageStatus(progress, "UNINSTALL", "FINISH UNINSTALLING PROCESS");
+            var snapshot = _deviceManager.DevicesDictionary.ToArray();
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await _deploymentService.ExecutePipeline(d.Value, _deploymentService.DeploymentPipeline(), progress);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+                finally 
+                { 
+                    semaphore.Release(); 
+                }
+            });
+            await Task.WhenAll(tasks);
         }
         public async Task StartManualHeadsetConnection(IProgress<ProgressStatus> progress)
         {
             DeviceCommandResult? result = null;
             try
             {
-                if (_connectionService.NewDevice)
-                    result = await _connectionService.AdbPair();
-                else
-                    result = await _connectionService.AdbConnectionFromPc(progress);
+                result = await _connectionService.AdbConnectionFromPc(progress);
                 if (result.ExitCode == 0)
                 {
-                    await _websocketService.StartWebSocketConnectionAsync(progress, result.Ip);
                     await ProgressStatus.OneLine(progress, 100, "CONNECTING DEVICE", "Successfull Connection");
                 }
                 else
@@ -87,6 +116,19 @@ namespace EasyConnect.Controllers
                 throw;
             }
         }
+        public async Task StartHeadsetDisconnection(IProgress<ProgressStatus> progress)
+        {
+            try
+            {
+                await ProgressStatus.MessageStatus(progress, "DISCONNECTION", "Starting disconnection service");
+                await _connectionService.AdbDisconnect(progress);
+                await ProgressStatus.MessageStatus(progress, "DISCONNECTION", "Disconnection service end successfully");
+            }
+            catch (Exception)
+            {
+                await ProgressStatus.MessageStatus(progress, "DISCONNECTION", "Disconnection service end with failure");
+            }
+        }
         public async Task StartAutoHeadsetConnection(IProgress<ProgressStatus> progress)
         {
             try
@@ -94,13 +136,14 @@ namespace EasyConnect.Controllers
                 var ipAddresses = await _networkService.StartAutoConnectionAsync();
                 if (ipAddresses == null || ipAddresses.Length == 0)
                     return;
-                await _connectionService.ConnectMultipleDevices(ipAddresses);
-                await _websocketService.StartWebSocketConnectionAsync(progress);
+                var result = await _connectionService.ConnectMultipleDevices(progress, ipAddresses);
+                await ProgressStatus.OneLine(progress, 100, "CONNECTING DEVICE", "Successfull Connection");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 Debug.WriteLine("Error al iniciar websocket");
                 await _websocketService.StopWebSocketConnectionAsync(progress);
+                await ProgressStatus.OneLine(progress, 100, "CONNECTING DEVICE", $"Failure in Connection: {ex.Message}");
                 throw;
             }
         }

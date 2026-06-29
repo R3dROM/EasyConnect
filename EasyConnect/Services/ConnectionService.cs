@@ -9,10 +9,11 @@ using System.Threading.Tasks;
 
 namespace EasyConnect.Services
 {
-    public class ConnectionService(AdbService adb, DeviceManager deviceManager, NetworkService networkService)
+    public class ConnectionService(AdbService adb, DeviceManager deviceManager, WebSocketService webSocketService, JobTrackerService jobTracker)
     {
         private readonly DeviceManager _deviceManager = deviceManager;
         private readonly AdbService _adbService = adb;
+        private readonly JobTrackerService _jobTracker = jobTracker;
         private string _headsetCode = "";
         public string HeadsetCode
         {
@@ -62,33 +63,30 @@ namespace EasyConnect.Services
             }
             return result;
         }
-        public async Task<DeviceCommandResult> AdbConnectionFromPc(IProgress<ProgressStatus> progress)
+        public async Task<DeviceCommandResult> AdbDisconnect(IProgress<ProgressStatus> progress, string? ip = null, string? port = null)
         {
+            string ipHeadset = default;
+            string portHeadset = default;
+            if (ip != null)
+                ipHeadset = ip;
+            else
+                ipHeadset = _headsetIp;
+            if (port != null)
+                portHeadset = port;
+            else
+                portHeadset= _headsetPort;
             try
             {
-                return await ProgressStatus.Step(progress, 0, 100, "CONNECTING DEVICE", $"Trying to connect to {_headsetIp}:{_headsetPort}", " Connection Service End",
+                var result = await ProgressStatus.Step(
+                    progress,
+                    0,
+                    100,
+                    "DISCONNECTING DEVICE Service",
+                    $"Trying to disconnect {ipHeadset}",
+                    "DISCONNECTING DEVICE Service End",
                     async () =>
                     {
-                        var result = await _adbService.ConnectDevice(_headsetIp, $"connect {_headsetIp}:{_headsetPort}");
-                        if (result.ExitCode != 0)
-                            return result;
-                        var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
-                        if (device != null && deviceToUpdate)
-                        {
-                            var serial = await _adbService.SerialNumberDevice(_headsetIp);
-                            device.SerialNumber = serial.Output.Trim();
-                            var dev = RootJsonService.Get(device.SerialNumber);
-                            if (dev != null)
-                            {
-                                Debug.WriteLine(dev.Number);
-                                if (dev.Number.StartsWith('0'))
-                                    dev.Number = dev.Number.Remove(0, 1);
-                                Debug.WriteLine(dev.Number);
-                                device.DeviceId = dev.Number;
-                            }
-                            //device.DeviceId = await networkService.GetDeviceIdFromManifest(device.SerialNumber);
-                            await _deviceManager.UpdateDeviceFromPC(device);
-                        }
+                        var result = await _adbService.AdbDisconnectDevice(ipHeadset, portHeadset);
                         return new DeviceCommandResult
                         {
                             Ip = result.Ip,
@@ -96,10 +94,89 @@ namespace EasyConnect.Services
                             Output = result.Output
                         };
                     });
+                await ProgressStatus.MessageStatus(progress, "DISCONNECTING DEVICE Service", result.Output);
+                if (result.ExitCode != 0)
+                {
+                    throw new Exception(result.Output);
+                }
+                _deviceManager.RemoveDevice(ipHeadset);
+                return result;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw;
+            }
+        }
+        public async Task<DeviceCommandResult> AdbConnectionFromPc(IProgress<ProgressStatus> progress, string? ipHeadset = null, string? portHeadset = null)
+        {
+            var ip = "";
+            if (ipHeadset == null)
+                ip = _headsetIp;
+            else
+                ip = ipHeadset;
+            var port = "";
+            if (portHeadset == null)
+                port = _headsetPort;
+            else
+                port = portHeadset;
+            try
+            {
+                return await ProgressStatus.Step(
+                    progress, 
+                    0, 
+                    100, 
+                    "CONNECTING DEVICE", 
+                    $"Trying to connect to {ip}:{port}", 
+                    "Connection Service End",
+                    async () =>
+                    {
+                        var result = await _adbService.ConnectDevice(ip, $"connect {ip}:{port}");
+                        if (result.ExitCode != 0)
+                            return result;
+                        var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
+                        if (device != null && deviceToUpdate)
+                        {
+                            var serial = await _adbService.SerialNumberDevice(ip);
+                            device.SerialNumber = serial.Output.Trim();
+                            //var dev = RootJsonService.Get(device.SerialNumber);
+                            //if (dev != null)
+                            //{
+                            //    if (dev.Number.StartsWith('0'))
+                            //        dev.Number = dev.Number[1..];
+                            //    device.DeviceId = dev.Number;
+                            //}
+                            //else
+                            //{
+                            //    device.DeviceId = "N/A";
+                            //}
+                            //await _deviceManager.UpdateDeviceFromPC(device);
+                            await webSocketService.StartWebSocketConnectionAsync(progress, ip);
+                            var job = _jobTracker.Register(ip);
+                            _ = _jobTracker.WaitForRegistration(ip, TimeSpan.FromSeconds(5), async () => await AdbDisconnect(progress, ip, port));
+                            return new DeviceCommandResult
+                            {
+                                Ip = result.Ip,
+                                ExitCode = result.ExitCode,
+                                Output = result.Output
+                            };
+                        }
+                        return new DeviceCommandResult
+                        {
+                            Ip = result.Ip,
+                            ExitCode = -1,
+                            Output = result.Output
+                        };
+                    });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return new DeviceCommandResult
+                {
+                    ExitCode = -1,
+                    Ip = ipHeadset ?? ip,
+                    Output = ex.Message
+                };
             }
         }
         public async Task<DeviceCommandResult> AdbConnectionFromDevice(DeviceReport device)
@@ -122,7 +199,7 @@ namespace EasyConnect.Services
             }
             return await _adbService.ConnectDevice(_headsetIp, $"connect {_headsetIp}:{_headsetPort}");
         }
-        public async Task<List<DeviceCommandResult>> ConnectMultipleDevices(IPAddress[] ipAddresses)
+        public async Task<List<DeviceCommandResult>> ConnectMultipleDevices(IProgress<ProgressStatus> progress, string[] ipAddresses)
         {
             var snapshot = ipAddresses.ToArray();
             var semaphore = new SemaphoreSlim(5);
@@ -131,8 +208,7 @@ namespace EasyConnect.Services
                 await semaphore.WaitAsync();
                 try
                 {
-                    DeviceReport device = new(ip.ToString());
-                    var output = await AdbConnectionFromDevice(device);
+                    var output = await AdbConnectionFromPc(progress, ip);
                     if (output.ExitCode != 0)
                         return new DeviceCommandResult
                         {
@@ -140,13 +216,6 @@ namespace EasyConnect.Services
                             Ip = "",
                             Output = "ERROR al conectar el visor"
                         };
-                    var result = await _adbService.SerialNumberDevice(output.Ip);
-                    var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var serial);
-                    if (serial != null && deviceToUpdate)
-                    {
-                        serial.SerialNumber = result.Output.Trim();
-                        await _deviceManager.UpdateDeviceFromPC(serial);
-                    }
                     return output;
                 }
                 finally

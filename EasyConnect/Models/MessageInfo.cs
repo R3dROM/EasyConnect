@@ -14,6 +14,7 @@ namespace EasyConnect.Models
     {
         public string ip { get; set; } = string.Empty;
         public string? serialNumber { get; set; }
+        public string? deviceNumber { get; set; }
         public int? batteryLvl {  get; set; }
         public string? status { get; set; }
         public string? currentFile { get; set; }

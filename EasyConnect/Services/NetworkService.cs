@@ -1,15 +1,11 @@
 ﻿using EasyConnect.Models;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+using Zeroconf;
 
 namespace EasyConnect.Services
 {
@@ -55,29 +51,7 @@ namespace EasyConnect.Services
             }
         }
         private string _caddyExe = string.Empty;
-        public string CaddyExe
-        {
-            get => _caddyExe;
-            set
-            {
-                if (_caddyExe != value)
-                {
-                    _caddyExe = value;
-                }
-            }
-        }
         private string _caddyFile = string.Empty;
-        public string CaddyFile
-        {
-            get => _caddyFile;
-            set
-            {
-                if (_caddyFile != value)
-                {
-                    _caddyFile = value;
-                }
-            }
-        }
         private string _caddyPath = string.Empty;
         public string CaddyPath
         {
@@ -88,7 +62,7 @@ namespace EasyConnect.Services
                 {
                     _caddyPath = value;
                     _caddyExe = Path.Combine(_caddyPath, "caddy.exe");
-                    _caddyFile = Path.Combine(_caddyPath, "Caddyfile");
+                    _caddyFile = Path.Combine(_caddyPath, "CaddyFile");
                 }
             }
         }
@@ -104,50 +78,66 @@ namespace EasyConnect.Services
                 }
             }
         }
-        private IPAddress[] _myIpAddress = [];
-        public IPAddress[] myIpAddress
+        private UnicastIPAddressInformation[] _myIpAddress = [];
+        public UnicastIPAddressInformation[] MyIpAddress
         {
             get => _myIpAddress;
             set
             {
                 if (_myIpAddress != value)
                     _myIpAddress = value;
-                OnPropertyChanged(nameof(myIpAddress));
+                OnPropertyChanged(nameof(MyIpAddress));
                 OnPropertyChanged(nameof(MyIPAddressesString));
             }
         }
-        public string MyIPAddressesString => myIpAddress.FirstOrDefault() == null ? "" : myIpAddress.FirstOrDefault()!.ToString();
+        public string MyIPAddressesString => MyIpAddress.FirstOrDefault() == null ? "" : MyIpAddress.FirstOrDefault()!.Address.ToString();
 
         private string _serverIp = "";
-        public string serverIp{
+        public string ServerIp{
             get => _serverIp;
             set 
             {
                 if (_serverIp != value)
                     _serverIp = value;
-                OnPropertyChanged(nameof(serverIp));
+                OnPropertyChanged(nameof(ServerIp));
             }
         }
         private string _serverPort = "8000";
-        public string serverPort
+        public string ServerPort
         {
             get => _serverPort;
             set
             {
                 if (_serverPort != value)
                     _serverPort = value;
-                OnPropertyChanged(nameof(serverPort));
+                OnPropertyChanged(nameof(ServerPort));
             }
         }
         private string _bundle = "";
-        public string bundle
+        public string Bundle
         {
             get => _bundle;
             set
             {
                 if (value != _bundle)
                     _bundle = value;
-                OnPropertyChanged(nameof(bundle));
+                OnPropertyChanged(nameof(Bundle));
+            }
+        }
+        private string _apkName = string.Empty;
+        public string ApkName
+        {
+            get => _apkName;
+            set
+            {
+                if (value != _apkName)
+                {
+                    var tmp = value;
+                    tmp = tmp.Substring(4);
+                    _apkName = tmp;
+
+                }
+                OnPropertyChanged(nameof(ApkName));
             }
         }
         protected void OnPropertyChanged(string name)
@@ -158,12 +148,14 @@ namespace EasyConnect.Services
         {
             await _consoleService.RunCommandAsync(_caddyExe, $"stop");
         }
-        public async Task PUTConfigLocal(string json, string path)
+        public async Task PUTConfigLocal(string json, string path, string file)
         {
             using HttpClient client = new();
             try
             {
-                string url = Path.Combine(DeployPath, path);
+                string folder = Path.Combine(DeployPath, path);
+                Directory.CreateDirectory(folder);
+                string url = Path.Combine(folder, file);
                 await File.WriteAllTextAsync(url, json);
             }
             catch (Exception ex)
@@ -176,8 +168,8 @@ namespace EasyConnect.Services
         {
             try
             {
-                string url = Path.Combine(DeployPath, "manifest.json");
-                var json = await File.ReadAllTextAsync(url);
+                var manifest = Path.Combine(DeployPath, "manifest.json");
+                var json = await File.ReadAllTextAsync(manifest);
                 if (json == null)
                     return null;
                 var files = JsonSerializer.Deserialize<Manifest>(json);
@@ -189,17 +181,47 @@ namespace EasyConnect.Services
                 return null;
             }
         }
-        public async Task GenerateManifest()
+        public async Task<DeviceCommandResult> GenerateManifest()
         {
-            var manifestScriptPath = Path.Combine(ManifestScriptsPath, "generate-manifest.ps1");
-            var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{manifestScriptPath}\" \"{DeployPath}\"");
-
-            Manifest = await GetManifestFromLocal();
-            if (Manifest != null)
+            try
             {
-                bundle = Manifest.bundle;
+                if (string.IsNullOrEmpty(DeployPath) || string.IsNullOrEmpty(ManifestScriptsPath))
+                    return new DeviceCommandResult
+                    {
+                        Ip = "127.0.0.1",
+                        ExitCode = -1,
+                        Output = "Manifest or Deploy path empty or NULL",
+                    };
+
+                var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{ManifestScriptsPath}\" \"{DeployPath}\"");
+
+                if (result.ExitCode != 0)
+                {
+                    return new DeviceCommandResult
+                    {
+                        Ip = "127.0.0.1",
+                        ExitCode = -1,
+                        Output = result.Output,
+                    };
+                }
+                Manifest = await GetManifestFromLocal();
+                if (Manifest != null)
+                {
+                    Bundle = Manifest.bundle;
+                    ApkName = Manifest.files.First(d => d.path.EndsWith(".apk")).path;
+                }
+                return new DeviceCommandResult
+                {
+                    Ip = "127.0.0.1",
+                    ExitCode = result.ExitCode,
+                    Output = result.Output,
+                };
             }
-            Debug.WriteLine(result.Output);
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
         public async Task<string> GetDeviceIdFromManifest(string serialNumber)
         {
@@ -230,10 +252,20 @@ namespace EasyConnect.Services
                 await Task.Run(async () =>
                 {
                     _myIpAddress = GetMyIpAddress();
+                    foreach (var item in _myIpAddress)
+                    {
+                        Debug.WriteLine(item.Address);
+                    }
                     _serverIp = MyIPAddressesString;
-                    await GenerateManifest();
+
+                    var manifestResult = await GenerateManifest();
+                    if (manifestResult.ExitCode != 0)
+                    {
+                        throw new Exception();
+                    }
+
                     await GetDeviceIdFromDeviceListPath();
-                    _ = _consoleService.RunCommandAsync(_caddyExe, $"start --config {_caddyFile}");
+                    _ =  _consoleService.RunCommandAsync(_caddyExe, $"run --config {_caddyFile}");
                 });
                 return new DeviceCommandResult
                 {
@@ -250,144 +282,37 @@ namespace EasyConnect.Services
                     ExitCode = -1,
                     Output = "Network Service Fail"
                 };
-                throw;
             }
         }
-        public async Task<IPAddress[]?> StartAutoConnectionAsync()
+        public async Task<string[]?> StartAutoConnectionAsync()
         {
-            return await NetworkScannerAsync(myIpAddress);
+            return await NetworkScannerAsync();
         }
-        public async Task<IPAddress[]?> NetworkScannerAsync(IPAddress[] myIpAddress)
+        public async Task<string[]?> NetworkScannerAsync()
         {
-            var ipv4 = myIpAddress.FirstOrDefault();
-            if (ipv4 == null || !IsLocalAddress(ipv4)) return null;
-
-            var ipSubMask = GetSubnetMask(ipv4);
-            if (ipSubMask == null) return null;
-
-            var (start, end) = GetIpRange(ipv4, ipSubMask);
-            var startIp = IpToUint(start);
-            var endIp = IpToUint(end);
-
-            var semaphore = new SemaphoreSlim(50);
-            var tasks = new List<Task<IPAddress?>>();
-            for (uint i = startIp + 1; i < endIp; i++)
-            {
-                var ip = UintToIp(i);
-                await semaphore.WaitAsync();
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        if (await PingAsync(ip.ToString()) &&
-                            await VerifyPortAsync(ip.ToString(), 5555))
-                        {
-                            return ip;
-                        }
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-
-                    return null;
-                }));
-            }
-            var results = await Task.WhenAll(tasks);
-            if (results != null)
-                return [.. results.Where(r => r != null)!];
-            return null;
+            var hostNames = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(15));
+            var listOfIp = hostNames.Select(r => r.IPAddress).ToList();
+            return [.. listOfIp];
         }
-        public async Task<bool> PingAsync(string ip)
+        public UnicastIPAddressInformation[] GetMyIpAddress()
         {
             try
             {
-                using var ping = new Ping();
-                var reply = await ping.SendPingAsync(ip, 5000);
-                return reply.Status == IPStatus.Success;
+                var networkWifiInterface = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(nic => 
+                    nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
+                    nic.OperationalStatus == OperationalStatus.Up);
+                var IPProperties = networkWifiInterface.FirstOrDefault().GetIPProperties();
+                var currentIPs =  IPProperties.UnicastAddresses;
+                return [.. currentIPs.Where(ip => 
+                ip.Address.AddressFamily == AddressFamily.InterNetwork
+                )];
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
                 throw;
             }
-        }
-        public async Task<bool> VerifyPortAsync(string ip, int port)
-        {
-            try
-            {
-                using var client = new TcpClient();
-                var connectTask = client.ConnectAsync(ip, port);
-                var completedTask = await Task.WhenAny(connectTask, Task.Delay(2000));
-                return completedTask == connectTask && client.Connected;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                throw;
-            }
-        }
-        public IPAddress[] GetMyIpAddress()
-        {
-            try
-            {
-                var currentIPs =  Dns.GetHostAddresses(Dns.GetHostName());
-                return [.. currentIPs.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)];
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                throw;
-            }
-        }
-        // Verifica si la IP pertenece a alguna interfaz local
-        public bool IsLocalAddress(IPAddress ip)
-        {
-            return NetworkInterface.GetAllNetworkInterfaces()
-                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-                .Any(a => a.Address.Equals(ip));
-        }
-        // Obtiene la máscara de subred de una IP local
-        private IPAddress? GetSubnetMask(IPAddress address)
-        {
-            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                foreach (var ua in ni.GetIPProperties().UnicastAddresses)
-                {
-                    if (ua.Address.AddressFamily == AddressFamily.InterNetwork && ua.Address.Equals(address))
-                    {
-                        return ua.IPv4Mask;
-                    }
-                }
-            }
-            return null;
-        }
-        // Calcula el rango de IPs a partir de IP y máscara
-        private (IPAddress start, IPAddress end) GetIpRange(IPAddress ip, IPAddress mask)
-        {
-            byte[] ipBytes = ip.GetAddressBytes();
-            byte[] maskBytes = mask.GetAddressBytes();
-
-            byte[] startIp = new byte[4];
-            byte[] endIp = new byte[4];
-
-            for (int i = 0; i < 4; i++)
-            {
-                startIp[i] = (byte)(ipBytes[i] & maskBytes[i]);
-                endIp[i] = (byte)(ipBytes[i] | (~maskBytes[i]));
-            }
-
-            return (new IPAddress(startIp), new IPAddress(endIp));
-        }
-        private uint IpToUint(IPAddress ip)
-        {
-            var bytes = ip.GetAddressBytes().Reverse().ToArray();
-            return BitConverter.ToUInt32(bytes, 0);
-        }
-        private IPAddress UintToIp(uint ip)
-        {
-            var bytes = BitConverter.GetBytes(ip).Reverse().ToArray();
-            return new IPAddress(bytes);
         }
     }
 }

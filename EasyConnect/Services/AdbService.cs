@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using static EasyConnect.Controllers.DeployController;
 
 namespace EasyConnect.Services
 {
@@ -141,6 +142,69 @@ namespace EasyConnect.Services
                 throw;
             }
         }
+        //public async Task AdbExecuteOnAllDevices(
+        //    Func<DeviceReport, Dictionary<DeploymentState, List<DeploymentProcess>>> buildArguments,
+        //    IProgress<ProgressStatus> progress
+        //    )
+        //{
+        //    var snapshot = _deviceManager.DevicesDictionary.ToArray();
+        //    var semaphore = new SemaphoreSlim(2);
+
+        //    var tasks = snapshot.Select(async d =>
+        //    {
+        //        await semaphore.WaitAsync();
+        //        try
+        //        {
+        //            DeviceJobResult? job = null;
+        //            var message = string.Empty;
+        //            var arguments = buildArguments(d.Value);
+        //            foreach (var argument in arguments)
+        //            {
+        //                var stage = DeploymentStateToString(argument.Key);
+        //                var listOfCommands = argument.Value;
+        //                _deviceManager.UpdateStatus(d.Value.Ip, stage);
+        //                foreach (var cmd in listOfCommands)
+        //                {
+        //                    var command = await ExecuteCommandOnDevice(d.Key, cmd.Process);
+        //                    if (cmd.IsWaitable)
+        //                    {
+        //                        job = await _jobTracker.WaitForCompletion(d.Key);
+        //                    }
+        //                    else
+        //                    {
+        //                        job = new DeviceJobResult
+        //                        {
+        //                            JobId = d.Key,
+        //                            ExitCode = 0,
+        //                            Output = command.Output
+        //                        };
+        //                        _jobTracker.Complete(job);
+        //                    }
+        //                    if (ParseResult(job.Output))
+        //                    {
+        //                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Success");
+        //                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Success";
+        //                    }
+        //                    else
+        //                    {
+        //                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Fail");
+        //                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Fail";
+        //                    }
+        //                    await ProgressStatus.MessageStatus(
+        //                        progress,
+        //                        stage,
+        //                        message
+        //                        );
+        //                }
+        //            }
+        //        }
+        //        finally
+        //        {
+        //            semaphore.Release();
+        //        }
+        //    });
+        //    await Task.WhenAll(tasks);
+        //}
         public async Task<List<DeviceCommandResult>> AdbExecuteOnAllDevices(
             Func<DeviceReport, string> buildArguments, 
             IProgress<ProgressStatus> progress,
@@ -205,19 +269,41 @@ namespace EasyConnect.Services
         {
             try
             {
-                var jobId = ip;
                 var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"-s {ip} {arguments}");
                 if (ExitCode != 0)
                 {
-                    var message = $"{jobId} - Command failed with exit code {ExitCode}: {Output}";
+                    var message = $"{ip} - Command failed with exit code {ExitCode}: {Output}";
                     throw new Exception(message);
                 }
-                _ = _jobTracker.Register(jobId);
+
                 return new DeviceCommandResult
                 {
                     Ip = ip,
                     ExitCode = ExitCode,
                     Output = Output,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new DeviceCommandResult
+                {
+                    Ip = ip,
+                    ExitCode = -1,
+                    Output = ex.Message
+                };
+            }
+        }
+        public async Task<DeviceCommandResult> AdbDisconnectDevice(string ip, string port)
+        {
+            try
+            {
+                var args = $"disconnect {ip}:{port}";
+                var command = await _consoleService.RunCommandAsync("adb", args);
+                return new DeviceCommandResult
+                {
+                    Ip = ip,
+                    ExitCode = command.ExitCode,
+                    Output = command.Output
                 };
             }
             catch (Exception ex)
@@ -262,15 +348,15 @@ namespace EasyConnect.Services
                 }
                 return;
             }
-            await AdbExecuteOnAllDevices(device =>
-                $"shell am start-foreground-service " +
-                $"-n com.easyconnect.agent/.WebSocketService " +
-                $"--es webSocketUrl ws://{serverIp}:8181 " +
-                $"--es serialNumber {device.SerialNumber}",
-                progress,
-                "WEBSOCKET",
-                true
-            );
+            //await AdbExecuteOnAllDevices(device =>
+            //    $"shell am start-foreground-service " +
+            //    $"-n com.easyconnect.agent/.WebSocketService " +
+            //    $"--es webSocketUrl ws://{serverIp}:8181 " +
+            //    $"--es serialNumber {device.SerialNumber}",
+            //    progress,
+            //    "WEBSOCKET",
+            //    true
+            //);
         }
         public async Task AdbStopWebSocketConnection(IProgress<ProgressStatus> progress, string serverIp, string? deviceIp = null)
         {
@@ -288,16 +374,16 @@ namespace EasyConnect.Services
                 }
                 return;
             }
-            await AdbExecuteOnAllDevices(device =>
-                $"shell am start-foreground-service " +
-                $"-n com.easyconnect.agent/.WebSocketService " +
-                $"--es webSocketUrl ws://{serverIp}:8181 " +
-                $"--es serialNumber {device.SerialNumber} " +
-                $"--es stop true",
-                progress,
-                "WEBSOCKET",
-                true
-            );
+            //await AdbExecuteOnAllDevices(device =>
+            //    $"shell am start-foreground-service " +
+            //    $"-n com.easyconnect.agent/.WebSocketService " +
+            //    $"--es webSocketUrl ws://{serverIp}:8181 " +
+            //    $"--es serialNumber {device.SerialNumber} " +
+            //    $"--es stop true",
+            //    progress,
+            //    "WEBSOCKET",
+            //    true
+            //);
         }
         private bool ParseAdbConnectResult(string output)
         {

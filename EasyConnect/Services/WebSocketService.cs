@@ -12,11 +12,9 @@ namespace EasyConnect.Services
         NetworkService _NetworkService, 
         AdbService _AdbService,
         DeviceManager _DeviceManager, 
-        ConnectionService _ConnectionService,
         JobTrackerService _jobTracker)
     {
         public  WebSocketServer? server;
-        private readonly ConnectionService connectionService = _ConnectionService;
         private readonly DeviceManager deviceManager = _DeviceManager;
         private readonly NetworkService networkService = _NetworkService;
         private readonly AdbService adbService = _AdbService;
@@ -27,15 +25,10 @@ namespace EasyConnect.Services
         {
             try
             {
-                serverIp = networkService.serverIp;
+                serverIp = networkService.ServerIp;
                 server = new WebSocketServer($"ws://{serverIp}:8181");
-                await StartWebSocketServer();
-                return new DeviceCommandResult
-                { 
-                    Ip = serverIp,
-                    ExitCode = 0,
-                    Output = "Websocket Service Ready"
-                };
+                var webSocketResult = await StartWebSocketServer();
+                return webSocketResult;
             }
             catch (Exception)
             {
@@ -43,12 +36,11 @@ namespace EasyConnect.Services
                 {
                     Ip = serverIp,
                     ExitCode = -1,
-                    Output = "Network Service Fail"
+                    Output = "Websocket Service Fail"
                 };
-                throw;
             }
         }
-        private async Task StartWebSocketServer()
+        private async Task<DeviceCommandResult> StartWebSocketServer()
         {
             try
             {
@@ -60,10 +52,13 @@ namespace EasyConnect.Services
                     };
                     ws.OnMessage = message =>
                     {
-                        _ = Task.Run(() =>
-                        {
-                            _ = ProcessMessage(ws, message);
-                        });
+                        var deviceUpdated =
+                        JsonSerializer.Deserialize<MessageInfo>(message);
+
+                        if (deviceUpdated == null || deviceUpdated.payload == null)
+                            return;
+
+                        ProcessMessage(ws, deviceUpdated);
                     };
                     ws.OnClose = () =>
                     {
@@ -71,10 +66,21 @@ namespace EasyConnect.Services
                         ws.Close();
                     };
                 });
+                return new DeviceCommandResult
+                {
+                    Ip = serverIp,
+                    ExitCode = 0,
+                    Output = "Websocket Service Ready"
+                };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Error WEBSOCKET: " + ex);
+                return new DeviceCommandResult
+                {
+                    Ip = serverIp,
+                    ExitCode = -1,
+                    Output = $"Websocket Service Fail + {ex.Message}"
+                };
                 throw;
             }
         }
@@ -86,47 +92,47 @@ namespace EasyConnect.Services
         {
             await adbService.AdbStopWebSocketConnection(progress, serverIp, deviceIp);
         }
-        private async Task ProcessMessage(IWebSocketConnection ws, string message)
+        private void ProcessMessage(IWebSocketConnection ws, MessageInfo deviceUpdated)
         {
             try
             {
-                var deviceUpdated = JsonSerializer.Deserialize<MessageInfo>(message);
-                if (deviceUpdated == null || deviceUpdated.payload == null) return;
                 switch (deviceUpdated.type)
                 {
                     case "downloadInformation":
-                        var jobDownload = new DeviceJobResult
-                        {
-                            JobId = deviceUpdated.payload.ip,
-                            ExitCode = 0,
-                            Output = $"Download of {deviceUpdated.payload.bundle} Success",
-                            DurationMs = 0L
-                        };
                         if (deviceManager.DevicesDictionary.ContainsKey(deviceUpdated.payload.ip))
                         {
                             deviceManager.UpdateDevice(deviceUpdated);
                             if (deviceUpdated.payload.timestamp > 0L)
                             {
-                                jobDownload.DurationMs = deviceUpdated.payload.timestamp ?? 0L;
-                                jobTracker.Complete(jobDownload);
+                                jobTracker.Complete(new DeviceJobResult
+                                {
+                                    JobId = deviceUpdated.payload.ip,
+                                    ExitCode = 0,
+                                    Output = $"Download of {deviceUpdated.payload.bundle} Success",
+                                    DurationMs = deviceUpdated.payload.timestamp ?? 0L
+                                });
                             }
                         }
                         break;
 
                     case "register":
-                        var jobRegister = new DeviceJobResult
+                        jobTracker.Complete(new DeviceJobResult
                         {
                             JobId = deviceUpdated.payload.ip,
                             ExitCode = 0,
-                            Output = "Done",
-                            DurationMs = 0L
-                        };
-                        if (!deviceManager.DevicesDictionary.ContainsKey(deviceUpdated.payload.ip))
-                        {
-                            var newDevice = new DeviceReport(deviceUpdated.payload.ip, deviceUpdated.payload.serialNumber);
-                            await connectionService.AdbConnectionFromDevice(newDevice);
-                        }
-                        jobTracker.Complete(jobRegister);
+                            Output = $"Register of {deviceUpdated.payload.serialNumber} Success",
+                            DurationMs = deviceUpdated.payload.timestamp ?? 0L
+                        });
+                        deviceManager.UpdateDevice(deviceUpdated);
+                        //if (!deviceManager.DevicesDictionary.ContainsKey(deviceUpdated.payload.ip))
+                        //{
+                        //    var newDevice = new DeviceReport(deviceUpdated.payload.ip, deviceUpdated.payload.serialNumber);
+                        //    //await connectionService.AdbConnectionFromDevice(newDevice);
+                        //}
+                        //else
+                        //{
+                        //    deviceManager.UpdateDevice(deviceUpdated);
+                        //}
                         break;
 
                     case "battery":

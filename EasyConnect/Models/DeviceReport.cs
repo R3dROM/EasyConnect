@@ -167,31 +167,44 @@ namespace EasyConnect.Models
         {
             if (other?.payload == null) return;
 
-            Ip = other.payload.ip;
-            SerialNumber = other.payload.serialNumber;
-            Bundle = other.payload.bundle;
-            Status = other.payload.status;
-            CurrentFile = other.payload.currentFile;
-            Percent = other.payload.percent;
-            ApkName = other.payload.apkName;
-            ApkSize = other.payload.apkSize;
-            Timestamp = other.payload.timestamp;
-            Battery = other.payload.batteryLvl;
+            if (other?.type == "downloadInformation")
+            {
+                Ip = other.payload.ip;
+                //SerialNumber = other.payload.serialNumber;
+                Bundle = other.payload.bundle;
+                Status = other.payload.status;
+                CurrentFile = other.payload.currentFile;
+                Percent = other.payload.percent;
+                ApkName = other.payload.apkName;
+                ApkSize = other.payload.apkSize;
+                Timestamp = other.payload.timestamp;
+                Battery = other.payload.batteryLvl;
+            }
+            if (other?.type == "register")
+            {
+                Ip = other.payload.ip;
+                DeviceId = other.payload.deviceNumber;
+                SerialNumber = other.payload.serialNumber;
+            }
+            if (other?.type == "battery")
+            {
+                Battery = other.payload.batteryLvl;
+            }
         }
         public void UpdateFromPc(DeviceReport other)
         {
             if (other == null) return;
 
-            Ip = other.Ip;
-            SerialNumber = other.SerialNumber;
-            DeviceId = other.DeviceId;
-            Bundle = other.Bundle;
-            Status = other.Status;
-            CurrentFile = other.CurrentFile;
-            Percent = other.Percent;
-            ApkName = other.ApkName;
-            ApkSize = other.ApkSize;
-            Timestamp = other.Timestamp;
+            //Ip = other.Ip;
+            ////SerialNumber = other.SerialNumber;
+            ////DeviceId = other.DeviceId;
+            //Bundle = other.Bundle;
+            //Status = other.Status;
+            //CurrentFile = other.CurrentFile;
+            //Percent = other.Percent;
+            //ApkName = other.ApkName;
+            //ApkSize = other.ApkSize;
+            //Timestamp = other.Timestamp;
         }
         public NetworkConfiguration DeviceReportToNetworkConfig() => new(Ip, SerialNumber??string.Empty);
     }

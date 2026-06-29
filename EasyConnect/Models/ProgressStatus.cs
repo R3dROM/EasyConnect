@@ -60,14 +60,14 @@ namespace EasyConnect.Models
                 throw;
             }
         }
-        public static async Task<T> Step<T>(
+        public static async Task<DeviceCommandResult> Step(
             IProgress<ProgressStatus> progress,
             int startPercent,
             int endPercent,
             string stage,
             string startMsg,
             string endMsg,
-            Func<Task<T>> action)
+            Func<Task<DeviceCommandResult>> action)
         {
             try
             {
@@ -79,7 +79,16 @@ namespace EasyConnect.Models
                 });
 
                 var result = await action();
-
+                if ( result.ExitCode != 0)
+                {
+                    progress.Report(new ProgressStatus
+                    {
+                        Stage = stage,
+                        Description = result.Output,
+                        IsCompleted = false
+                    });
+                    throw new Exception($"Excepcion en {stage}");
+                }
                 progress.Report(new ProgressStatus
                 {
                     Percent = endPercent,
@@ -89,10 +98,28 @@ namespace EasyConnect.Models
                 });
                 return result;
             }
-            catch (Exception)
+            catch (Exception) 
             {
                 throw;
             }
+        }
+        public static Progress<ProgressStatus> ProgressBar(ProgressBar progressBarInitializer, ListBox listBoxStartingLogs)
+        {
+            return new Progress<ProgressStatus>(p =>
+            {
+                if (p.Percent >= 0)
+                {
+                    progressBarInitializer.Value = Math.Max(
+                        progressBarInitializer.Minimum,
+                        Math.Min(progressBarInitializer.Maximum, p.Percent)
+                    );
+                }
+                if (p.Stage != null)
+                {
+                    listBoxStartingLogs.Items.Add(p);
+                    listBoxStartingLogs.TopIndex = listBoxStartingLogs.Items.Count - 1;
+                }
+            });
         }
     }
 }

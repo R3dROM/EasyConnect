@@ -1,5 +1,6 @@
 ﻿using EasyConnect.Controllers;
 using EasyConnect.Models;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace EasyConnect.Services
@@ -9,9 +10,27 @@ namespace EasyConnect.Services
         WebSocketService websocket,
         AdbService adb,
         HttpController http,
-        DeviceManager deviceManager)
+        DeviceManager deviceManager) : INotifyPropertyChanged
     {
-        private Lock _lock = new ();
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private readonly Lock _lock = new ();
+        private bool _inAction = false;
+        public bool InAction
+        {
+            get => _inAction;
+            set
+            {
+                if (_inAction != value) 
+                { 
+                    lock (_lock)
+                    {
+                        _inAction = value;
+                        OnPropertyChanged(nameof(InAction));
+                    }
+                }
+            }
+        }
         private bool _isClosing;
         public bool IsClosing
         {
@@ -23,6 +42,7 @@ namespace EasyConnect.Services
                     lock (_lock)
                     {
                         _isClosing = value;
+                        OnPropertyChanged(nameof(IsClosing));
                     }
                 }
             }
@@ -72,6 +92,7 @@ namespace EasyConnect.Services
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"ERROR SETTING UP THE SERVICES!! ", ex);
                 throw new Exception($"ERROR SETTING UP THE SERVICES!! ", ex);
             }
         }
@@ -113,6 +134,11 @@ namespace EasyConnect.Services
             {
                 throw new Exception($"ERROR AL CERRAR!! ", ex);
             }
+        }
+
+        protected void OnPropertyChanged(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

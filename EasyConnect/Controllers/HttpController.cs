@@ -24,7 +24,7 @@ namespace EasyConnect.Controllers
                 _ = StartListener();
                 return new DeviceCommandResult
                 { 
-                    Ip = _NetworkServices.serverIp,
+                    Ip = _NetworkServices.ServerIp,
                     ExitCode = 0,
                     Output = "HTTP listener/Handler Service Ready"
                 };
@@ -33,17 +33,16 @@ namespace EasyConnect.Controllers
             {
                 return new DeviceCommandResult
                 {
-                    Ip = _NetworkServices.serverIp,
+                    Ip = _NetworkServices.ServerIp,
                     ExitCode = -1,
                     Output = "HTTP listener/Handler Service Fail"
                 };
-                throw;
             }
         }
         public async Task<Manifest?> GetManifestFromServer()
         {
-            var ipServer = _NetworkServices.serverIp;
-            var portServer = _NetworkServices.serverPort;
+            var ipServer = _NetworkServices.ServerIp;
+            var portServer = _NetworkServices.ServerPort;
             string url = $"http://{ipServer}:{portServer}/manifest.json";
 
             using HttpClient client = new();
@@ -71,8 +70,8 @@ namespace EasyConnect.Controllers
             using HttpClient client = new();
             try
             {
-                var ipServer = _NetworkServices.serverIp;
-                var portServer = _NetworkServices.serverPort;
+                var ipServer = _NetworkServices.ServerIp;
+                var portServer = _NetworkServices.ServerPort;
                 string url = $"http://{ipServer}:{portServer}/upload";
                 var dest = Path.Combine(url, path).Replace("\\", "/");
                 using var content = new StringContent(json, new System.Text.UTF8Encoding(false), "application/json");
@@ -95,15 +94,19 @@ namespace EasyConnect.Controllers
                 return;
             }
         }
-        private async Task StartListener()
+        private async Task<DeviceCommandResult> StartListener()
         {
             if (_HttpListener != null && _HttpListener.IsListening)
-                return;
+                return new DeviceCommandResult
+                {
+                    Ip = "127.0.0.1",
+                    ExitCode = 0,
+                    Output = "Server Already Listening"
+                };
             _HttpListener = new HttpListener();
             _HttpListener.Prefixes.Add("http://127.0.0.1:7777/");
             _HttpListener.Start();
 
-            Debug.WriteLine($"ESCUCHANDO EN EL PUERTO 7777");
             JsonSerializerOptions options = new()
             {
                 WriteIndented = true
@@ -119,6 +122,10 @@ namespace EasyConnect.Controllers
                     try
                     {
                         await HandleRequest(context, options);
+                    }
+                    catch
+                    {
+                        throw;
                     }
                     finally
                     {
@@ -155,7 +162,7 @@ namespace EasyConnect.Controllers
             catch (Exception ex)
             {
                 context.Response.StatusCode = 500;
-                throw new Exception($"ERROR",ex);
+                throw new Exception($"ERROR", ex);
             }
             finally
             {

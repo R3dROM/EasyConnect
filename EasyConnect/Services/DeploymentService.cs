@@ -3,164 +3,227 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static EasyConnect.Controllers.DeployController;
 
 namespace EasyConnect.Services
 {
-    public class DeploymentService(AdbService adbService, DeviceManager deviceManager, NetworkService networkService)
+    public class DeploymentService(AdbService adbService, DeviceManager deviceManager, NetworkService networkService, JobTrackerService jobTrackerService)
     {
         private readonly DeviceManager _deviceManager = deviceManager;
         private readonly AdbService _adbService = adbService;
         private readonly NetworkService _networkService = networkService;
-
-        public async Task AdbDownload(string ipServer, string portServer, IProgress<ProgressStatus> progress)
+        private readonly JobTrackerService _jobTracker = jobTrackerService;
+        private string DeploymentStateToString(DeploymentState _deploymentState)
         {
-            await _adbService.AdbExecuteOnAllDevices(device => $"shell am start-foreground-service " +
-            $"-n com.easyconnect.agent/.DownloadService " +
-            $"--es url http://{ipServer}:{portServer} ", 
-            progress,
-            "DOWNLOAD",
-            true
-            );
+            return _deploymentState == DeploymentState.Download ? "Download" :
+                _deploymentState == DeploymentState.Move ? "Move" :
+                _deploymentState == DeploymentState.Install ? "Install" : "Uninstall";
         }
-        public async Task AdbMove(IProgress<ProgressStatus> progress, string bundleID)
+        public List<DeploymentProcess> DeploymentPipeline()
         {
-            await _adbService.AdbExecuteOnAllDevices(device => 
-            $"shell mkdir -p /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/files/ && mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/CONFIGS/NetworkingConfiguration.json " +
-            $"/sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/files/",
-            progress,
-            "MOVE",
-            false
-            );
-            await _adbService.AdbExecuteOnAllDevices(device => 
-            $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/apk/{device.ApkName} /data/local/tmp/",
-            progress,
-            "MOVE",
-            false
-            );
-            await _adbService.AdbExecuteOnAllDevices(device => 
-            $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{device.Bundle}/ /sdcard/Android/data/{device.Bundle}",
-            progress,
-            "MOVE",
-            false
-            );
-            await _adbService.AdbExecuteOnAllDevices(device => 
-            $"shell rm -r /sdcard/Android/data/com.easyconnect.agent/files/",
-            progress,
-            "MOVE",
-            false
-            );
+            return
+            [
+                new() { State = DeploymentState.Download, Execute = DownloadAsync },
+                new() { State = DeploymentState.Move, Execute = MoveAsync },
+                new() { State = DeploymentState.Install, Execute = InstallAsync },
+            ];
         }
-        public async Task AdbInstall(IProgress<ProgressStatus> progress)
+        public async Task ExecutePipeline(DeviceReport device, 
+            IEnumerable<DeploymentProcess> pipeline, 
+            IProgress<ProgressStatus> progress)
         {
-            await _adbService.AdbExecuteOnAllDevices(device =>
-                $"shell pm install /data/local/tmp/{device.ApkName}",
+            await ProgressStatus.Step(
                 progress,
-                "INSTALL",
-                false
-            );
-        }
-        public async Task AdbUninstall(IProgress<ProgressStatus> progress)
-        {
-            await _adbService.AdbExecuteOnAllDevices(device =>
-                $"shell pm uninstall {device.Bundle}",
-                progress,
-                "UNINSTALL",
-                false
-            );
-        }
-        private async Task<List<DeviceCommandResult>> AdbUninstallOnAllDevices()
-        {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
-            var semaphore = new SemaphoreSlim(5);
-            var task = snapshot.Select(async d =>
-            {
-                await semaphore.WaitAsync();
-                try
+                0,
+                100,
+                "DEPLOY",
+                "Starting deployment service",
+                "Deployment service end",
+                async () =>
                 {
-                    _deviceManager.UpdateStatus(d.Value.Ip, "Uninstalling");
-                    var instalResult = await PackageOnDevice(d.Value, $"uninstall {_networkService.bundle}");
-                    if (ParseInstallResult(instalResult.Output))
-                        _deviceManager.UpdateStatus(d.Value.Ip, "Uninstall Success");
-                    else
-                        _deviceManager.UpdateStatus(d.Value.Ip, "Uninstall Fail");
-                    return instalResult;
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            });
-            var result = await Task.WhenAll(task);
-            return [.. result];
-        }
-        private async Task<List<DeviceCommandResult>> AdbInstallOnAllDevices(IProgress<ProgressStatus> progress)
-        {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
-            var semaphore = new SemaphoreSlim(5);
+                    foreach (var step in pipeline)
+                    {
+                        var stage = DeploymentStateToString(step.State);
+                        _deviceManager.UpdateStatus(device.Ip, stage);
+                        await ProgressStatus.MessageStatus(
+                            progress,
+                            stage,
+                            $"{device.Ip} start {stage}");
+                        var result = await step.Execute(device);
 
-            var task = snapshot.Select(async d =>
-            {
-                await semaphore.WaitAsync();
-                try
-                {
-                    _deviceManager.UpdateStatus(d.Value.Ip, "Installing");
-                    var instalResult = await PackageOnDevice(d.Value, $"install /data/local/tmp/{d.Value.ApkName}");
-                    if (ParseInstallResult(instalResult.Output))
-                        _deviceManager.UpdateStatus(d.Value.Ip, "Install Success");
-                    else
-                        _deviceManager.UpdateStatus(d.Value.Ip, "Install Fail");
-                    return instalResult;
+                        if (result.ExitCode != 0)
+                        {
+                            _deviceManager.UpdateStatus(device.Ip, $"{stage} Fail");
+                            await ProgressStatus.MessageStatus(
+                            progress,
+                            stage,
+                            $"{device.Ip} end {stage} with failure {result.Output}");
+                            return new DeviceCommandResult
+                            {
+                                Ip = device.Ip,
+                                ExitCode = result.ExitCode,
+                                Output = result.Output,
+                            };
+                        }
+
+                        _deviceManager.UpdateStatus(device.Ip, $"{stage} Success");
+                        await ProgressStatus.MessageStatus(
+                            progress,
+                            stage,
+                            $"{device.Ip} end {stage} successfuly");
+                    }
+                    return new DeviceCommandResult
+                    {
+                        Ip = device.Ip,
+                        ExitCode = 0,
+                        Output = "DEPLOYMENT SUCCESS",
+                    };
                 }
-                finally
-                {
-                    semaphore.Release();
-                }
-            });
-            var result = await Task.WhenAll(task);
-            return [.. result];
+                );
         }
-        private async Task<DeviceCommandResult> PackageOnDevice(DeviceReport device, string args)
+        private async Task<DeviceJobResult> DownloadAsync(DeviceReport device)
         {
-            var outputBuilder = new StringBuilder();
+            var jobId = device.Ip;
+            _ = _jobTracker.Register(jobId);
+            var result = await _adbService.ExecuteCommandOnDevice(device.Ip,
+                $"shell am start-foreground-service " +
+                $"-n com.easyconnect.agent/.DownloadService " +
+                $"--es url http://{_networkService.ServerIp}:{_networkService.ServerPort}");
+
+            if (result == null || result.ExitCode != 0)
+            {
+                var job = new DeviceJobResult
+                {
+                    JobId = device.Ip,
+                    Output = "Invalid event",
+                    ExitCode = -1,
+                    DurationMs = 0
+                };
+                _jobTracker.Complete(job);
+                return job;
+            }
+
+            var evt = await _jobTracker.WaitForCompletion(device.Ip);
+
+            if (evt == null || !evt.Output.Contains("Success"))
+            {
+                return new DeviceJobResult
+                {
+                    JobId = device.Ip,
+                    Output = "Invalid event",
+                    ExitCode = -1,
+                    DurationMs = evt?.DurationMs ?? 0
+                };
+            }
+            return new DeviceJobResult
+            {
+                JobId = device.Ip,
+                Output = evt.Output,
+                ExitCode = 0,
+                DurationMs = evt.DurationMs
+            };
+        }
+        private async Task<DeviceJobResult> MoveAsync(DeviceReport device)
+        {
             try
             {
-                if (device == null) throw new Exception("Device es NULL");
-                async Task<DeviceCommandResult> RunPkg(string cmd)
+                var bundle = _networkService.Bundle;
+                var apk = _networkService.ApkName;
+
+                var cmd =
+                        "shell sh -c \"" +
+                        $"mkdir -p /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/files/ && " +
+                        $"mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/CONFIGS/NetworkingConfiguration.json " +
+                        $"/sdcard/Android/data/com.easyconnect.agent/files/{bundle}/files/ 2>/dev/null || true && " +
+                        $"mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/apk/{apk} /data/local/tmp/ 2>/dev/null || true && " +
+                        $"mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/ /sdcard/Android/data/{bundle} 2>/dev/null || true && " +
+                        $"rm -rf /sdcard/Android/data/com.easyconnect.agent/files/{bundle}\"";
+
+                var result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+                if (result.ExitCode != 0)
                 {
-                    var result = await
-                        _adbService.ExecuteCommandOnDevice(device.Ip, $"shell pm {cmd}");
-
-                    outputBuilder.AppendLine($"[{cmd}]");
-                    outputBuilder.AppendLine(result.Output);
-                    if (result.ExitCode != 0)
-                        throw new Exception($"Fallo en: {cmd}." +
-                            $"\n {result.Output}");
-
-                    return result;
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = result.ExitCode,
+                        Output = result.Output
+                    };
                 }
-                if (string.IsNullOrEmpty(device.ApkName) || device.ApkSize <= 0)
-                    throw new Exception("APK inválido");
-                await RunPkg(args);
-                return new DeviceCommandResult
+
+                var verify = await _adbService.ExecuteCommandOnDevice(device.Ip,
+                    $"shell test -f /data/local/tmp/{apk}");
+
+                if (verify.ExitCode != 0)
                 {
-                    Ip = device.Ip,
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = 1,
+                        Output = "APK not found in /data/local/tmp after move"
+                    };
+                }
+
+                return new DeviceJobResult
+                {
+                    JobId = device.Ip,
                     ExitCode = 0,
-                    Output = outputBuilder.ToString(),
+                    Output = result.Output
                 };
             }
             catch (Exception ex)
             {
-                return new DeviceCommandResult
+                return new DeviceJobResult
                 {
-                    Ip = device.Ip,
+                    JobId = device.Ip,
                     ExitCode = -1,
-                    Output = $"ERROR INESPERADO {ex.Message}",
+                    Output = ex.Message
                 };
             }
+        }
+        private async Task<DeviceJobResult> InstallAsync(DeviceReport device)
+        {
+            var cmd = $"shell pm install -r -g /data/local/tmp/{_networkService.ApkName}";
+            var result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+            if (result.ExitCode != 0)
+            {
+                return new DeviceJobResult
+                {
+                    JobId = device.Ip,
+                    ExitCode = result.ExitCode,
+                    Output = result.Output
+                };
+            }
+            return new DeviceJobResult
+            {
+                JobId = device.Ip,
+                ExitCode = 0,
+                Output = result.Output
+            };
+        }
+        public async Task<DeviceJobResult> UninstallAsync(DeviceReport device)
+        {
+            var cmd = $"shell pm uninstall {_networkService.Bundle}";
+            var result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+            if (result.ExitCode != 0)
+            {
+                return new DeviceJobResult
+                {
+                    JobId = device.Ip,
+                    ExitCode = result.ExitCode,
+                    Output = result.Output
+                };
+            }
+            return new DeviceJobResult
+            {
+                JobId = device.Ip,
+                ExitCode = 0,
+                Output = result.Output
+            };
         }
         private bool ParseInstallResult(string output)
         {
