@@ -78,6 +78,18 @@ namespace EasyConnect.Services
                 }
             }
         }
+        private NetworkInterface _networkInterfaces;
+        public NetworkInterface NetworkInterfaces
+        {
+            get => _networkInterfaces;
+            set
+            {
+                if (_networkInterfaces != value)
+                {
+                    _networkInterfaces = value;
+                }
+            }
+        }
         private UnicastIPAddressInformation[] _myIpAddress = [];
         public UnicastIPAddressInformation[] MyIpAddress
         {
@@ -290,23 +302,47 @@ namespace EasyConnect.Services
         }
         public async Task<string[]?> NetworkScannerAsync()
         {
-            var hostNames = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(15));
-            var listOfIp = hostNames.Select(r => r.IPAddress).ToList();
+            var results = new Dictionary<string, IZeroconfHost>();
+            for (int i = 0; i < 5; i++)
+            {
+                var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(2));
+
+                foreach (var host in hosts)
+                    results[host.IPAddress] = host;
+
+                await Task.Delay(1000);
+            }
+            var listOfIp = results.Select(r => r.Key).ToList();
             return [.. listOfIp];
         }
         public UnicastIPAddressInformation[] GetMyIpAddress()
         {
             try
             {
-                var networkWifiInterface = NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(nic => 
-                    nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
-                    nic.OperationalStatus == OperationalStatus.Up);
-                var IPProperties = networkWifiInterface.FirstOrDefault().GetIPProperties();
-                var currentIPs =  IPProperties.UnicastAddresses;
-                return [.. currentIPs.Where(ip => 
-                ip.Address.AddressFamily == AddressFamily.InterNetwork
-                )];
+                _networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+                            .FirstOrDefault(nic =>
+                                nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
+                                nic.OperationalStatus == OperationalStatus.Up)
+                            ??
+                            NetworkInterface.GetAllNetworkInterfaces()
+                            .Where(nic =>
+                                nic.OperationalStatus == OperationalStatus.Up &&
+                                !nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) &&
+                                !nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase))
+                            .FirstOrDefault(nic =>
+                                (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                                 nic.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet) &&
+                                nic.OperationalStatus == OperationalStatus.Up)!;
+                if (_networkInterfaces == null)
+                    return [];
+
+                return
+                [
+                    .. _networkInterfaces
+                .GetIPProperties()
+                .UnicastAddresses
+                .Where(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                ];
             }
             catch (Exception ex)
             {

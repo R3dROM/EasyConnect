@@ -140,7 +140,7 @@
             // 
             // buttonAUTOSCANN
             // 
-            buttonAUTOSCANN.Location = new Point(258, 20);
+            buttonAUTOSCANN.Location = new Point(267, 20);
             buttonAUTOSCANN.Margin = new Padding(3, 2, 3, 2);
             buttonAUTOSCANN.Name = "buttonAUTOSCANN";
             buttonAUTOSCANN.Size = new Size(110, 30);
@@ -432,7 +432,7 @@
             buttonDisconnect.Location = new Point(137, 20);
             buttonDisconnect.Margin = new Padding(3, 2, 3, 2);
             buttonDisconnect.Name = "buttonDisconnect";
-            buttonDisconnect.Size = new Size(115, 30);
+            buttonDisconnect.Size = new Size(124, 30);
             buttonDisconnect.TabIndex = 13;
             buttonDisconnect.Text = "DISCONNECT";
             buttonDisconnect.UseVisualStyleBackColor = true;

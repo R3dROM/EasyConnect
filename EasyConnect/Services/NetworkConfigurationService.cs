@@ -60,11 +60,12 @@ namespace EasyConnect.Services
                         {
                             DeviceId = item.DeviceId,
                             DisplayName = item.DeviceId,
-                            UserGroup = "Default",
+                            IsAdmin = "false",
                             Port = "7777",
                             Ip = ExperienceServerIp,
-                            IpSecondary = "",
-                            SecondsToCkick = "4"
+                            SecondaryIp = "",
+                            FileTransferProtocol = 1,
+                            HttpPort = 9090
                         };
                         string json = JsonSerializer.Serialize(config, options);
                         await _networkService.PUTConfigLocal(json, "CONFIGS", $"{item.SerialNumber}.json");

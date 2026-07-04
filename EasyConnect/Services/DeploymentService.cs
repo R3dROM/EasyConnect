@@ -134,7 +134,7 @@ namespace EasyConnect.Services
             {
                 var bundle = _networkService.Bundle;
                 var apk = _networkService.ApkName;
-
+                
                 var cmd =
                         "shell sh -c \"" +
                         $"mkdir -p /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/files/ && " +
@@ -144,6 +144,7 @@ namespace EasyConnect.Services
                         $"mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/ /sdcard/Android/data/{bundle} 2>/dev/null || true && " +
                         $"rm -rf /sdcard/Android/data/com.easyconnect.agent/files/{bundle}\"";
 
+                cmd = $"shell mkdir -p /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/files/";
                 var result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
                 if (result.ExitCode != 0)
                 {
@@ -154,7 +155,50 @@ namespace EasyConnect.Services
                         Output = result.Output
                     };
                 }
-
+                cmd = $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/CONFIGS/NetworkingConfiguration.json /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/files/";
+                result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+                if (result.ExitCode != 0)
+                {
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = result.ExitCode,
+                        Output = result.Output
+                    };
+                }
+                cmd = $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/apk/{apk} /data/local/tmp/";
+                result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+                if (result.ExitCode != 0)
+                {
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = result.ExitCode,
+                        Output = result.Output
+                    };
+                }
+                cmd = $"shell mv /sdcard/Android/data/com.easyconnect.agent/files/{bundle}/ /sdcard/Android/data/{bundle}";
+                result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+                if (result.ExitCode != 0)
+                {
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = result.ExitCode,
+                        Output = result.Output
+                    };
+                }
+                cmd = $"shell rm -rf /sdcard/Android/data/com.easyconnect.agent/files/{bundle}";
+                result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
+                if (result.ExitCode != 0)
+                {
+                    return new DeviceJobResult
+                    {
+                        JobId = device.Ip,
+                        ExitCode = result.ExitCode,
+                        Output = result.Output
+                    };
+                }
                 var verify = await _adbService.ExecuteCommandOnDevice(device.Ip,
                     $"shell test -f /data/local/tmp/{apk}");
 

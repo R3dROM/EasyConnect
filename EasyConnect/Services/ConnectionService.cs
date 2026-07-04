@@ -136,6 +136,7 @@ namespace EasyConnect.Services
                         var deviceToUpdate = _deviceManager.GetDevice(result.Ip, out var device);
                         if (device != null && deviceToUpdate)
                         {
+                            var job = _jobTracker.Register(ip);
                             var serial = await _adbService.SerialNumberDevice(ip);
                             device.SerialNumber = serial.Output.Trim();
                             //var dev = RootJsonService.Get(device.SerialNumber);
@@ -151,7 +152,6 @@ namespace EasyConnect.Services
                             //}
                             //await _deviceManager.UpdateDeviceFromPC(device);
                             await webSocketService.StartWebSocketConnectionAsync(progress, ip);
-                            var job = _jobTracker.Register(ip);
                             _ = _jobTracker.WaitForRegistration(ip, TimeSpan.FromSeconds(5), async () => await AdbDisconnect(progress, ip, port));
                             return new DeviceCommandResult
                             {
@@ -160,6 +160,13 @@ namespace EasyConnect.Services
                                 Output = result.Output
                             };
                         }
+                        _jobTracker.Complete(new DeviceJobResult
+                        {
+                            JobId = ip,
+                            ExitCode = 0,
+                            Output = $"No Register",
+                            DurationMs = 0L
+                        });
                         return new DeviceCommandResult
                         {
                             Ip = result.Ip,
@@ -171,6 +178,13 @@ namespace EasyConnect.Services
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
+                _jobTracker.Complete(new DeviceJobResult
+                {
+                    JobId = ipHeadset ?? ip,
+                    ExitCode = 0,
+                    Output = $"No Register",
+                    DurationMs = 0L
+                });
                 return new DeviceCommandResult
                 {
                     ExitCode = -1,
