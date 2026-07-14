@@ -305,12 +305,12 @@ namespace EasyConnect.Services
             var results = new Dictionary<string, IZeroconfHost>();
             for (int i = 0; i < 5; i++)
             {
-                var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(2));
+                var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(10), 5);
 
                 foreach (var host in hosts)
                     results[host.IPAddress] = host;
 
-                await Task.Delay(1000);
+                await Task.Delay(50);
             }
             var listOfIp = results.Select(r => r.Key).ToList();
             return [.. listOfIp];

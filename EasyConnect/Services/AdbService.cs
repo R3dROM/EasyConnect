@@ -342,8 +342,7 @@ namespace EasyConnect.Services
                 {
                     var argument = $"shell am start-foreground-service " +
                         $"-n com.easyconnect.agent/.WebSocketService " +
-                        $"--es webSocketUrl ws://{serverIp}:8181 " +
-                        $"--es serialNumber {device.SerialNumber}";
+                        $"--es webSocketUrl ws://{serverIp}:8181 ";
                     await ExecuteCommandOnDevice(deviceIp, argument);
                 }
                 return;

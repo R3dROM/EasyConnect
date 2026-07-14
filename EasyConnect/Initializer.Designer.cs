@@ -153,11 +153,12 @@
             // listBoxStartingLogs
             // 
             listBoxStartingLogs.BackColor = SystemColors.ButtonFace;
+            listBoxStartingLogs.DrawMode = DrawMode.OwnerDrawFixed;
             listBoxStartingLogs.Font = new Font("Consolas", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listBoxStartingLogs.FormattingEnabled = true;
             listBoxStartingLogs.Location = new Point(41, 233);
             listBoxStartingLogs.Name = "listBoxStartingLogs";
-            listBoxStartingLogs.Size = new Size(716, 130);
+            listBoxStartingLogs.Size = new Size(716, 124);
             listBoxStartingLogs.TabIndex = 16;
             // 
             // buttonMdmFile

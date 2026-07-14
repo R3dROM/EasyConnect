@@ -42,10 +42,6 @@ namespace EasyConnect
             this._DeployController = _DeployController;
             this._AppManager = _AppManager;
 
-            listBoxLogs.DrawMode = DrawMode.OwnerDrawFixed;
-            listBoxLogs.ItemHeight = 20;
-            listBoxLogs.DrawItem += listBoxLogs_DrawItem!;
-
             _AppManager.PropertyChanged += InputUserHandler!;
         }
 
@@ -71,43 +67,16 @@ namespace EasyConnect
                     SettButtonEnabled(control.Controls, enabled);
             }
         }
-        private void listBoxLogs_DrawItem(object sender, DrawItemEventArgs e)
-        {
-            if (e.Index < 0) return;
-
-            e.DrawBackground();
-
-            if (listBoxLogs.Items[e.Index] is ProgressStatus status)
-            {
-                // Selección
-                Color bgColor = (e.State & DrawItemState.Selected) != 0
-                    ? SystemColors.Highlight
-                    : listBoxLogs.BackColor;
-
-                Color fgColor = status.IsCompleted
-                    ? Color.DarkGreen
-                    : status.Percent < 100
-                        ? Color.Black
-                        : Color.Black;
-
-                using (var bgBrush = new SolidBrush(bgColor))
-                    e.Graphics.FillRectangle(bgBrush, e.Bounds);
-
-                using var fgBrush = new SolidBrush(fgColor);
-                Font font = status.IsCompleted
-                    ? new Font(e.Font!, FontStyle.Regular)
-                    : e.Font!;
-                e.Graphics.DrawString(status.ToString(), font, fgBrush, e.Bounds.X + 2, e.Bounds.Y);
-            }
-
-            e.DrawFocusRectangle();
-        }
         private async void Form1_Load(object sender, EventArgs e)
         {
             _UiContext = SynchronizationContext.Current;
             if (_UiContext != null)
             {
                 await _AppManager.StartEventSubscribeAsync(_UiContext);
+
+
+                _AppManager.ListBoxLogs = listBoxLogs;
+                listBoxLogs.DrawItem += _AppManager.ListBoxLogs_DrawItem!;
 
                 labelBUNDLE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
                 labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.MyIPAddressesString), false, DataSourceUpdateMode.OnPropertyChanged);

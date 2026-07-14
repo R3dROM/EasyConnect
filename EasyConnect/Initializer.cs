@@ -12,11 +12,11 @@ namespace EasyConnect
     }
     public partial class Initializer : Form
     {
-        private States _currentState { get; set; }
+        private States _currentState { get; set; } = States.NotInitialized;
 
         private readonly WINDOW _window;
         private readonly NetworkService _networkService;
-        private readonly AppManager _appInitializer;
+        private readonly AppManager _appManager;
         private readonly OpenFileDialog _openFileDialog = new();
         private readonly FolderBrowserDialog _folderBrowserDialog = new();
 
@@ -24,64 +24,38 @@ namespace EasyConnect
 
         public Initializer(
             NetworkService _networkService,
-            AppManager _appInitializer,
+            AppManager _appManager,
             WINDOW _window
             )
         {
             InitializeComponent();
             this._window = _window;
             this._networkService = _networkService;
-            this._appInitializer = _appInitializer;
+            this._appManager = _appManager;
 
-            _currentState = States.NotInitialized;
-            listBoxStartingLogs.DrawMode = DrawMode.OwnerDrawFixed;
-            listBoxStartingLogs.ItemHeight = 20;
-            listBoxStartingLogs.DrawItem += ListBoxStartingLogs_DrawItem!;
+            _appManager.ListBoxLogs = listBoxStartingLogs;
+            listBoxStartingLogs.DrawItem += _appManager.ListBoxLogs_DrawItem!;
+
+            StartPaths();
+        }
+        private void StartPaths()
+        {
             var persistentPath = Application.StartupPath;
             startupPaths = Path.Combine(persistentPath, "startupPaths.json");
 
             if (!File.Exists(startupPaths))
                 return;
-            var file = File.ReadAllText( startupPaths );
+            var file = File.ReadAllText(startupPaths);
             if (file == null)
                 return;
             var paths = JsonSerializer.Deserialize<StartUpPaths>(file);
             if (paths == null)
                 return;
+
             caddyPath.Text = paths.CaddyPath;
             manifestPath.Text = paths.ManifestPath;
             deployPath.Text = paths.DeployPath;
             devicesList.Text = paths.DeviceListPath;
-        }
-        private void ListBoxStartingLogs_DrawItem(object sender, DrawItemEventArgs e)
-        {
-            if (e.Index < 0) return;
-
-            e.DrawBackground();
-
-            if (listBoxStartingLogs.Items[e.Index] is ProgressStatus status)
-            {
-                // Selección
-                Color bgColor = (e.State & DrawItemState.Selected) != 0
-                    ? SystemColors.Highlight
-                    : listBoxStartingLogs.BackColor;
-
-                Color fgColor = status.IsCompleted
-                    ? Color.DarkGreen
-                    : status.Percent < 100
-                        ? Color.Black
-                        : Color.Black;
-
-                using (var bgBrush = new SolidBrush(bgColor))
-                    e.Graphics.FillRectangle(bgBrush, e.Bounds);
-
-                using var fgBrush = new SolidBrush(fgColor);
-                Font font = status.IsCompleted
-                    ? new Font(e.Font!, FontStyle.Bold)
-                    : e.Font!;
-                e.Graphics.DrawString(status.ToString(), font, fgBrush, e.Bounds.X + 2, e.Bounds.Y);
-            }
-            e.DrawFocusRectangle();
         }
         private void FolderBrowser(Action<string?> assing)
         {
@@ -155,14 +129,14 @@ namespace EasyConnect
                         devicesList.Text,
                         manifestPath.Text
                         );
-                    string json = JsonSerializer.Serialize(newPath, options );
-                    await File.WriteAllTextAsync(startupPaths, json );
+                    string json = JsonSerializer.Serialize(newPath, options);
+                    await File.WriteAllTextAsync(startupPaths, json);
                     _networkService.CaddyPath = caddyPath.Text;
                     _networkService.DeployPath = deployPath.Text;
                     _networkService.DeviceListPath = devicesList.Text;
                     _networkService.ManifestScriptsPath = manifestPath.Text;
 
-                    await _appInitializer.StartAsync(progress);
+                    await _appManager.StartAsync(progress);
                     progressBarInitializer.Value = 100;
                     _currentState = States.Initialized;
                     await Task.Delay(3000);

@@ -14,6 +14,12 @@ namespace EasyConnect.Services
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        private ListBox? _listBoxLogs;
+        public ListBox? ListBoxLogs
+        {
+            get => _listBoxLogs;
+            set => _listBoxLogs = value;
+        }
         private readonly Lock _lock = new ();
         private bool _inAction = false;
         public bool InAction
@@ -118,6 +124,37 @@ namespace EasyConnect.Services
                         _UiContext.Post(_ => _adb.DevicesBindingList.Remove(existing), null);
                 };
             });
+        }
+        public void ListBoxLogs_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            if (e.Index < 0 || _listBoxLogs == null) return;
+
+            e.DrawBackground();
+
+            if (_listBoxLogs.Items[e.Index] is ProgressStatus status)
+            {
+                // Selección
+                Color bgColor = (e.State & DrawItemState.Selected) != 0
+                    ? SystemColors.Highlight
+                    : _listBoxLogs.BackColor;
+
+                Color fgColor = status.IsCompleted
+                    ? Color.DarkGreen
+                    : status.Percent < 100
+                        ? Color.Black
+                        : Color.Black;
+
+                using (var bgBrush = new SolidBrush(bgColor))
+                    e.Graphics.FillRectangle(bgBrush, e.Bounds);
+
+                using var fgBrush = new SolidBrush(fgColor);
+                Font font = status.IsCompleted
+                    ? new Font(e.Font!, FontStyle.Regular)
+                    : e.Font!;
+                e.Graphics.DrawString(status.ToString(), font, fgBrush, e.Bounds.X + 2, e.Bounds.Y);
+            }
+
+            e.DrawFocusRectangle();
         }
         public async Task CloseAsync()
         {

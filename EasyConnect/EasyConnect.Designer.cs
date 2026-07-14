@@ -338,6 +338,7 @@
             // 
             // listBoxLogs
             // 
+            listBoxLogs.DrawMode = DrawMode.OwnerDrawFixed;
             listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listBoxLogs.FormattingEnabled = true;
             listBoxLogs.HorizontalScrollbar = true;

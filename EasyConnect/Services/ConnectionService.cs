@@ -152,7 +152,7 @@ namespace EasyConnect.Services
                             //}
                             //await _deviceManager.UpdateDeviceFromPC(device);
                             await webSocketService.StartWebSocketConnectionAsync(progress, ip);
-                            _ = _jobTracker.WaitForRegistration(ip, TimeSpan.FromSeconds(5), async () => await AdbDisconnect(progress, ip, port));
+                            _ = _jobTracker.WaitForRegistration(ip, TimeSpan.FromSeconds(2), async () => await AdbDisconnect(progress, ip, port));
                             return new DeviceCommandResult
                             {
                                 Ip = result.Ip,
