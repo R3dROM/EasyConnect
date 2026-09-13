@@ -1,27 +1,26 @@
-﻿using System.Collections.Generic;
-
-namespace EasyConnect.Models
+﻿namespace EasyConnect.Models
 {
+    [Serializable]
     public class Manifest
     {
-        public required string version {  get; set; }
-        public required string bundle { get; set; }
-        public required List<Files> files {  get; set; }
-        public required List<Configs> netConfigs { get; set; }
+        public required string Version {  get; set; }
+        public required string Bundle { get; set; }
+        public required List<Files> Files { get; set; }
+        public required List<Configs> NetConfigs { get; set; }
     }
 
     public class Files
     {
-        public required string path { get; set; }
-        public required string sha256 { get; set; }
-        public required long size { get; set; }
+        public required string Path { get; set; }
+        public required string Sha256 { get; set; }
+        public required long Size { get; set; }
     }
-    public class Configs()
+    public class Configs
     {
-        public required string path { get; set; }
-        public required string deviceId { get; set; }
-        public required string serialNumber { get; set; }
-        public required string sha256 { get; set; }
-        public required long size { get; set; }
+        public required string Path { get; set; }
+        public required string DeviceId { get; set; }
+        public required string SerialNumber { get; set; }
+        public required string Sha256 { get; set; }
+        public required long Size { get; set; }
     }
 }

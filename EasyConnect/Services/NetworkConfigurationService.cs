@@ -1,4 +1,5 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Managers;
 using EasyConnect.Models;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -9,9 +10,11 @@ namespace EasyConnect.Services
 {
     public class NetworkConfigurationService(
         NetworkService _networkService,
+        DeviceManager _deviceManager,
         AdbService _adbService)
     {
         private readonly AdbService _adbService = _adbService;
+        private readonly DeviceManager _deviceManager = _deviceManager;
         private readonly NetworkService _networkService = _networkService;
         private Manifest? _manifest = null;
         public Manifest? Manifest
@@ -25,8 +28,6 @@ namespace EasyConnect.Services
                 }
             }
         }
-        private readonly BindingList<NetworkConfiguration> _netConfigsBindingList = [];
-        public BindingList<NetworkConfiguration> NetConfigsBindingList => _netConfigsBindingList;
 
         private string _experienceServerIp = string.Empty;
         public string ExperienceServerIp
@@ -41,25 +42,25 @@ namespace EasyConnect.Services
             }
         }
 
-        public async Task GenerateNetworkingConfigurationJson(IProgress<ProgressStatus> progress)
+        public async Task GenerateNetworkingConfigurationJson(IProgress<ProgressStatus<Stages>> progress)
         {
-            await ProgressStatus.Step(
+            await ProgressStatusService.Step(
                 progress,
                 0,
                 100,
-                "GENERATING",
+                Stages.Generate,
                 "Generating configuration",
                 "Configuration generated",
                 async () =>
                 {
                     JsonSerializerOptions options = new() { WriteIndented = true };
-                    var snapshot = _adbService.DevicesBindingList.ToList();
+                    var snapshot = _deviceManager.DevicesBindingList.ToList();
                     foreach (var item in snapshot)
                     {
                         var config = new
                         {
-                            DeviceId = item.DeviceId,
-                            DisplayName = item.DeviceId,
+                            DeviceId = item.DeviceId.ToString(),
+                            DisplayName = item.DeviceId.ToString(),
                             IsAdmin = "false",
                             Port = "7777",
                             Ip = ExperienceServerIp,

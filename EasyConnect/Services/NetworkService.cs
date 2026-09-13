@@ -5,13 +5,17 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json;
-using Zeroconf;
+using System.Text.RegularExpressions;
 
 namespace EasyConnect.Services
 {
     public class NetworkService(ConsoleService _consoleService ) : INotifyPropertyChanged
     {
         private readonly ConsoleService _consoleService = _consoleService;
+        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private Manifest? _manifest = null;
@@ -66,43 +70,22 @@ namespace EasyConnect.Services
                 }
             }
         }
-        private string _deviceListPath = string.Empty;
-        public string DeviceListPath
-        {
-            get => _deviceListPath;
-            set
-            {
-                if (value != _deviceListPath)
-                {
-                    _deviceListPath= value;
-                }
-            }
-        }
-        private NetworkInterface _networkInterfaces;
-        public NetworkInterface NetworkInterfaces
-        {
-            get => _networkInterfaces;
-            set
-            {
-                if (_networkInterfaces != value)
-                {
-                    _networkInterfaces = value;
-                }
-            }
-        }
-        private UnicastIPAddressInformation[] _myIpAddress = [];
-        public UnicastIPAddressInformation[] MyIpAddress
+
+        private IPAddress[] _myIpAddress = [];
+        public IPAddress[] myIpAddress
         {
             get => _myIpAddress;
             set
             {
                 if (_myIpAddress != value)
                     _myIpAddress = value;
-                OnPropertyChanged(nameof(MyIpAddress));
+                OnPropertyChanged(nameof(myIpAddress));
                 OnPropertyChanged(nameof(MyIPAddressesString));
             }
         }
-        public string MyIPAddressesString => MyIpAddress.FirstOrDefault() == null ? "" : MyIpAddress.FirstOrDefault()!.Address.ToString();
+
+        public string MyIPAddressesString =>
+            myIpAddress.First(ip => Regex.IsMatch(ip.ToString(), @"^192\.168\.\d{1,3}\.\d{1,3}$")).ToString() ?? string.Empty;
 
         private string _serverIp = "";
         public string ServerIp{
@@ -123,6 +106,28 @@ namespace EasyConnect.Services
                 if (_serverPort != value)
                     _serverPort = value;
                 OnPropertyChanged(nameof(ServerPort));
+            }
+        }
+        private string _webSocketPort = "8181";
+        public string WebSocketPort
+        {
+            get => _webSocketPort;
+            set
+            {
+                if (_webSocketPort != value)
+                    _webSocketPort = value;
+                OnPropertyChanged(nameof(WebSocketPort));
+            }
+        }
+        private string _folderBundle = "";
+        public string FolderBundle
+        {
+            get => _folderBundle;
+            set
+            {
+                if (value != _folderBundle)
+                    _folderBundle = value;
+                OnPropertyChanged(nameof(FolderBundle));
             }
         }
         private string _bundle = "";
@@ -184,7 +189,7 @@ namespace EasyConnect.Services
                 var json = await File.ReadAllTextAsync(manifest);
                 if (json == null)
                     return null;
-                var files = JsonSerializer.Deserialize<Manifest>(json);
+                var files = JsonSerializer.Deserialize<Manifest>(json, _jsonSerializerOptions);
                 return files;
             }
             catch (Exception ex)
@@ -219,8 +224,8 @@ namespace EasyConnect.Services
                 Manifest = await GetManifestFromLocal();
                 if (Manifest != null)
                 {
-                    Bundle = Manifest.bundle;
-                    ApkName = Manifest.files.First(d => d.path.EndsWith(".apk")).path;
+                    Bundle = Manifest.Bundle;
+                    ApkName = Manifest.Files.First(d => d.Path.EndsWith(".apk")).Path;
                 }
                 return new DeviceCommandResult
                 {
@@ -235,28 +240,6 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-        public async Task<string> GetDeviceIdFromManifest(string serialNumber)
-        {
-            if (Manifest == null)
-                return "";
-            foreach (var item in Manifest.netConfigs)
-            {
-                if (item.serialNumber == serialNumber)
-                    return item.deviceId;
-            }
-            return "";
-        }
-        public async Task GetDeviceIdFromDeviceListPath()
-        {
-            if (!string.IsNullOrEmpty(_deviceListPath))
-            {
-                var deviceListString = await File.ReadAllTextAsync(_deviceListPath);
-                if (deviceListString != null)
-                {
-                    await RootJsonService.LoadJsonFile(deviceListString);
-                }
-            }
-        }
         public async Task<DeviceCommandResult> StartServerNetwork()
         {
             try
@@ -266,17 +249,15 @@ namespace EasyConnect.Services
                     _myIpAddress = GetMyIpAddress();
                     foreach (var item in _myIpAddress)
                     {
-                        Debug.WriteLine(item.Address);
+                        Debug.WriteLine(item.ToString());
                     }
                     _serverIp = MyIPAddressesString;
 
-                    var manifestResult = await GenerateManifest();
-                    if (manifestResult.ExitCode != 0)
-                    {
-                        throw new Exception();
-                    }
-
-                    await GetDeviceIdFromDeviceListPath();
+                    //var manifestResult = await GenerateManifest();
+                    //if (manifestResult.ExitCode != 0)
+                    //{
+                    //    throw new Exception();
+                    //}
                     _ =  _consoleService.RunCommandAsync(_caddyExe, $"run --config {_caddyFile}");
                 });
                 return new DeviceCommandResult
@@ -296,53 +277,57 @@ namespace EasyConnect.Services
                 };
             }
         }
-        public async Task<string[]?> StartAutoConnectionAsync()
+        public async Task<IPAddress[]?> StartAutoConnectionAsync()
         {
-            return await NetworkScannerAsync();
+            return await NetworkScannerAsync(myIpAddress);
         }
-        public async Task<string[]?> NetworkScannerAsync()
+        public async Task<IPAddress[]?> NetworkScannerAsync(IPAddress[] myIpAddress)
         {
-            var results = new Dictionary<string, IZeroconfHost>();
-            for (int i = 0; i < 5; i++)
+            var ipv4 = myIpAddress.FirstOrDefault();
+            if (ipv4 == null || !IsLocalAddress(ipv4)) return null;
+
+            var ipSubMask = GetSubnetMask(ipv4);
+            if (ipSubMask == null) return null;
+
+            var (start, end) = GetIpRange(ipv4, ipSubMask);
+            var startIp = IpToUint(start);
+            var endIp = IpToUint(end);
+
+            var semaphore = new SemaphoreSlim(50);
+            var tasks = new List<Task<IPAddress?>>();
+            for (uint i = startIp + 1; i < endIp; i++)
             {
-                var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(10), 5);
+                var ip = UintToIp(i);
+                await semaphore.WaitAsync();
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (await VerifyPortAsync(ip.ToString(), 5555))
+                        {
+                            return ip;
+                        }
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
 
-                foreach (var host in hosts)
-                    results[host.IPAddress] = host;
-
-                await Task.Delay(50);
+                    return null;
+                }));
             }
-            var listOfIp = results.Select(r => r.Key).ToList();
-            return [.. listOfIp];
+            var results = await Task.WhenAll(tasks);
+            if (results != null)
+                return [.. results.Where(r => r != null)!];
+            return null;
         }
-        public UnicastIPAddressInformation[] GetMyIpAddress()
+        public async Task<bool> PingAsync(string ip)
         {
             try
             {
-                _networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
-                            .FirstOrDefault(nic =>
-                                nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
-                                nic.OperationalStatus == OperationalStatus.Up)
-                            ??
-                            NetworkInterface.GetAllNetworkInterfaces()
-                            .Where(nic =>
-                                nic.OperationalStatus == OperationalStatus.Up &&
-                                !nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) &&
-                                !nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase))
-                            .FirstOrDefault(nic =>
-                                (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
-                                 nic.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet) &&
-                                nic.OperationalStatus == OperationalStatus.Up)!;
-                if (_networkInterfaces == null)
-                    return [];
-
-                return
-                [
-                    .. _networkInterfaces
-                .GetIPProperties()
-                .UnicastAddresses
-                .Where(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork)
-                ];
+                using var ping = new Ping();
+                var reply = await ping.SendPingAsync(ip, 15000);
+                return reply.Status == IPStatus.Success;
             }
             catch (Exception ex)
             {
@@ -350,5 +335,132 @@ namespace EasyConnect.Services
                 throw;
             }
         }
+        public async Task<bool> VerifyPortAsync(string ip, int port)
+        {
+            using var client = new TcpClient();
+            try
+            {
+                var connectTask = client.ConnectAsync(ip, port);
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(1000));
+                return completedTask == connectTask && client.Connected;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                throw;
+            }
+        }
+        public IPAddress[] GetMyIpAddress()
+        {
+            try
+            {
+                var currentIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                return [.. currentIPs.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)];
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                throw;
+            }
+        }
+        // Verifica si la IP pertenece a alguna interfaz local
+        public bool IsLocalAddress(IPAddress ip)
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                .Any(a => a.Address.Equals(ip));
+        }
+        // Obtiene la máscara de subred de una IP local
+        private IPAddress? GetSubnetMask(IPAddress address)
+        {
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+                {
+                    if (ua.Address.AddressFamily == AddressFamily.InterNetwork && ua.Address.Equals(address))
+                    {
+                        return ua.IPv4Mask;
+                    }
+                }
+            }
+            return null;
+        }
+        // Calcula el rango de IPs a partir de IP y máscara
+        private (IPAddress start, IPAddress end) GetIpRange(IPAddress ip, IPAddress mask)
+        {
+            byte[] ipBytes = ip.GetAddressBytes();
+            byte[] maskBytes = mask.GetAddressBytes();
+
+            byte[] startIp = new byte[4];
+            byte[] endIp = new byte[4];
+
+            for (int i = 0; i < 4; i++)
+            {
+                startIp[i] = (byte)(ipBytes[i] & maskBytes[i]);
+                endIp[i] = (byte)(ipBytes[i] | (~maskBytes[i]));
+            }
+
+            return (new IPAddress(startIp), new IPAddress(endIp));
+        }
+        private uint IpToUint(IPAddress ip)
+        {
+            var bytes = ip.GetAddressBytes().Reverse().ToArray();
+            return BitConverter.ToUInt32(bytes, 0);
+        }
+        private IPAddress UintToIp(uint ip)
+        {
+            var bytes = BitConverter.GetBytes(ip).Reverse().ToArray();
+            return new IPAddress(bytes);
+        }
+        //public async Task<string[]?> NetworkScannerAsync()
+        //{
+        //    var results = new Dictionary<string, IZeroconfHost>();
+        //    for (int i = 0; i < 2; i++)
+        //    {
+        //        var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(30), 5);
+
+        //        foreach (var host in hosts)
+        //            results[host.IPAddress] = host;
+
+        //        await Task.Delay(50);
+        //    }
+        //    var listOfIp = results.Select(r => r.Key).ToList();
+        //    return [.. listOfIp];
+        //}
+        //public UnicastIPAddressInformation[] GetMyIpAddress()
+        //{
+        //    try
+        //    {
+        //        _networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+        //                    .FirstOrDefault(nic =>
+        //                        nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
+        //                        nic.OperationalStatus == OperationalStatus.Up)
+        //                    ??
+        //                    NetworkInterface.GetAllNetworkInterfaces()
+        //                    .Where(nic =>
+        //                        nic.OperationalStatus == OperationalStatus.Up &&
+        //                        !nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) &&
+        //                        !nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase))
+        //                    .FirstOrDefault(nic =>
+        //                        (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+        //                         nic.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet) &&
+        //                        nic.OperationalStatus == OperationalStatus.Up)!;
+        //        if (_networkInterfaces == null)
+        //            return [];
+
+        //        return
+        //        [
+        //            .. _networkInterfaces
+        //        .GetIPProperties()
+        //        .UnicastAddresses
+        //        .Where(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork)
+        //        ];
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine(ex);
+        //        throw;
+        //    }
+        //}
     }
 }

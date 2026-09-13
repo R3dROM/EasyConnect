@@ -1,4 +1,5 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Managers;
 using EasyConnect.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ namespace EasyConnect
             Application.SetCompatibleTextRenderingDefault(false);
             
             var services = new ServiceCollection();
+            services.AddSingleton<MessageInfoHandler>();
             services.AddSingleton<ConsoleService>();
             services.AddSingleton<DeviceManager>();
             services.AddSingleton<DeploymentService>();
@@ -27,10 +29,8 @@ namespace EasyConnect
             services.AddSingleton<WebSocketService>();
             services.AddSingleton<DeployController>();
             services.AddSingleton<HttpController>();
-            services.AddSingleton<RootJsonService>();
             services.AddSingleton<AppManager>();
             services.AddSingleton<WINDOW>();
-            services.AddSingleton<NetworkingConfiguration>();
             services.AddSingleton<JobTrackerService>();
             services.AddSingleton<Initializer>();
             services.AddSingleton<NetworkConfigurationService>();
@@ -39,8 +39,7 @@ namespace EasyConnect
 
             var initializer = ServiceProvider.GetService<Initializer>();
             var mainForm = ServiceProvider.GetService<WINDOW>();
-            var netConfigForm = ServiceProvider.GetService<NetworkingConfiguration>();
-            if(mainForm != null && netConfigForm != null && initializer != null)
+            if(mainForm != null && initializer != null)
             {
                 Application.Run(initializer);
             }

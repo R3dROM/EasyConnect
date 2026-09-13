@@ -9,55 +9,52 @@ namespace EasyConnect.Services
 {
     public class JobTrackerService
     {
-        private ConcurrentDictionary<string, DeviceJobSession> _sessions = new();
+        private long _jobId = 10;
+        public bool Complete(IReport message)
+            => Finish(message, 0);
 
-        public Task<DeviceJobResult> Register(string JobId)
+        public bool Cancel(IReport message)
+            => Finish(message, 1);
+
+        public bool Fail(IReport message)
+            => Finish(message, 2);
+        private ConcurrentDictionary<long, DeviceJobSession> _sessions = new();
+
+        public long Register(string deviceId)
         {
-            var session = new DeviceJobSession
-            {
-                JobId = JobId,
-                Completion = new TaskCompletionSource<DeviceJobResult>(
-                    TaskCreationOptions.RunContinuationsAsynchronously )
-            };
-            _sessions.TryAdd( JobId, session );
+            long currentJobId = Interlocked.Increment(ref _jobId);
+            var session = new DeviceJobSession(
+                currentJobId,
+                deviceId);
+            _sessions.TryAdd( currentJobId, session );
+            return currentJobId;
+        }
+        public Task<DeviceJobResult> WaitForCompletion(long jobId)
+        {
+            if (!_sessions.TryGetValue(jobId, out var session))
+                throw new InvalidOperationException($"Job {jobId} not found");
+
             return session.Completion.Task;
         }
-        public Task<DeviceJobResult> WaitForCompletion(string jobId)
+        private bool Finish(IReport message, int exitCode)
         {
-            var tcs = new TaskCompletionSource<DeviceJobResult>();
-            _sessions[jobId].Completion = tcs;
-            return tcs.Task;
-        }
-        public Task<DeviceJobResult> WaitForRegistration(string jobId, TimeSpan timeout, Action onTimeout)
-        {
-            var tcs = new TaskCompletionSource<DeviceJobResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var jobId = message.JobId ?? 0L;
 
-            _sessions[jobId].Completion = tcs;
+            if (jobId == 0)
+                return false;
 
-            var cts = new CancellationTokenSource(timeout);
+            if (!_sessions.TryRemove(jobId, out var session))
+                return false;
 
-            cts.Token.Register(() =>
+            var result = new DeviceJobResult
             {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        onTimeout?.Invoke();
-                    }
-                    finally
-                    {
-                        tcs.TrySetException(
-                            new TimeoutException($"Job {jobId} timed out."));
-                    }
-                });
-            });
-            tcs.Task.ContinueWith(_ => cts.Dispose());
-            return tcs.Task;
-        }
-        public void Complete(DeviceJobResult result)
-        {
-            if (_sessions.TryRemove(result.JobId, out var session))
-                session.Completion.TrySetResult(result);
+                JobId = jobId,
+                ExitCode = exitCode,
+                Output = message.Type.ToString(),
+                DurationMs = message.Timestamp ?? 0L
+            };
+
+            return session.Completion.TrySetResult(result);
         }
     }
 }

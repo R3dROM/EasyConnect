@@ -1,8 +1,8 @@
-﻿using EasyConnect.Models;
+﻿using EasyConnect.Managers;
+using EasyConnect.Models;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using static EasyConnect.Controllers.DeployController;
 
 namespace EasyConnect.Services
 {
@@ -11,13 +11,14 @@ namespace EasyConnect.Services
         private readonly DeviceManager _deviceManager;
         private readonly ConsoleService _consoleService;
 
-        private readonly BindingList<DeviceInfo> _devicesBindingList = [];
+        //private readonly BindingList<DeviceInfo> _devicesBindingList = [];
+        //public BindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
+
         private readonly JobTrackerService _jobTracker;
-        public BindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
 
         public AdbService(DeviceManager deviceManager, ConsoleService consoleService, JobTrackerService jobTracker)
         {
-            _devicesBindingList.AllowEdit = true;
+            //_devicesBindingList.AllowEdit = true;
             _deviceManager = deviceManager;
             _consoleService = consoleService;
             _jobTracker = jobTracker;
@@ -77,48 +78,48 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-        public async Task<DeviceCommandResult> ConnectDevice(string _headsetIp, string arguments, DeviceReport? device = null)
-        {
-            try
-            {
-                device ??= new DeviceReport(_headsetIp);
-                if (!_deviceManager.AddDevice(device))
-                    return new DeviceCommandResult
-                    {
-                        ExitCode = -1,
-                        Ip = "",
-                        Output = "Dispositivo ya conectado"
-                    };
-                var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"{arguments}");
-                if (ExitCode != 0)
-                {
-                    _deviceManager.RemoveDevice(device.Ip);
-                    throw new Exception("Error al conectar el dispositivo");
-                }
-                if (!ParseAdbConnectResult(Output))
-                {
-                    Debug.WriteLine(_deviceManager.RemoveDevice(device.Ip));
-                    throw new Exception($"Conexión fallida {Output}");
-                }
-                return new DeviceCommandResult
-                {
-                    ExitCode = 0,
-                    Ip = device.Ip,
-                    Output = Output
-                };
-            }
-            catch (Exception ex)
-            {
-                if (device != null && _deviceManager.GetDevice(device.Ip, out var deviceToDisconnect))
-                    Debug.WriteLine(_deviceManager.RemoveDevice(deviceToDisconnect!.Ip));
-                return new DeviceCommandResult
-                {
-                    ExitCode = -1,
-                    Ip = "",
-                    Output = ex.Message
-                };
-            }
-        }
+        //public async Task<DeviceCommandResult> ConnectDevice(string id, DeviceReport? device = null)
+        //{
+        //    try
+        //    {
+        //        device ??= new DeviceReport(id);
+        //        if (!_deviceManager.AddDevice(device))
+        //            return new DeviceCommandResult
+        //            {
+        //                ExitCode = -1,
+        //                Ip = "",
+        //                Output = "Dispositivo ya conectado"
+        //            };
+        //        //var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"{arguments}");
+        //        //if (ExitCode != 0)
+        //        //{
+        //        //    _deviceManager.RemoveDevice(device.Ip);
+        //        //    throw new Exception("Error al conectar el dispositivo");
+        //        //}
+        //        //if (!ParseAdbConnectResult(Output))
+        //        //{
+        //        //    Debug.WriteLine(_deviceManager.RemoveDevice(device.Ip));
+        //        //    throw new Exception($"Conexión fallida {Output}");
+        //        //}
+        //        return new DeviceCommandResult
+        //        {
+        //            ExitCode = 0,
+        //            Ip = device.Ip,
+        //            Output = "Connected"
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        if (device != null && _deviceManager.GetReport(device.Ip, out var deviceToDisconnect))
+        //            Debug.WriteLine(_deviceManager.RemoveDevice(deviceToDisconnect!.Ip));
+        //        return new DeviceCommandResult
+        //        {
+        //            ExitCode = -1,
+        //            Ip = "",
+        //            Output = ex.Message
+        //        };
+        //    }
+        //}
         public async Task<DeviceCommandResult> SerialNumberDevice(string ip)
         {
             try
@@ -141,129 +142,6 @@ namespace EasyConnect.Services
                 await _consoleService.RunCommandAsync("adb", $"disconnect {ip}");
                 throw;
             }
-        }
-        //public async Task AdbExecuteOnAllDevices(
-        //    Func<DeviceReport, Dictionary<DeploymentState, List<DeploymentProcess>>> buildArguments,
-        //    IProgress<ProgressStatus> progress
-        //    )
-        //{
-        //    var snapshot = _deviceManager.DevicesDictionary.ToArray();
-        //    var semaphore = new SemaphoreSlim(2);
-
-        //    var tasks = snapshot.Select(async d =>
-        //    {
-        //        await semaphore.WaitAsync();
-        //        try
-        //        {
-        //            DeviceJobResult? job = null;
-        //            var message = string.Empty;
-        //            var arguments = buildArguments(d.Value);
-        //            foreach (var argument in arguments)
-        //            {
-        //                var stage = DeploymentStateToString(argument.Key);
-        //                var listOfCommands = argument.Value;
-        //                _deviceManager.UpdateStatus(d.Value.Ip, stage);
-        //                foreach (var cmd in listOfCommands)
-        //                {
-        //                    var command = await ExecuteCommandOnDevice(d.Key, cmd.Process);
-        //                    if (cmd.IsWaitable)
-        //                    {
-        //                        job = await _jobTracker.WaitForCompletion(d.Key);
-        //                    }
-        //                    else
-        //                    {
-        //                        job = new DeviceJobResult
-        //                        {
-        //                            JobId = d.Key,
-        //                            ExitCode = 0,
-        //                            Output = command.Output
-        //                        };
-        //                        _jobTracker.Complete(job);
-        //                    }
-        //                    if (ParseResult(job.Output))
-        //                    {
-        //                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Success");
-        //                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Success";
-        //                    }
-        //                    else
-        //                    {
-        //                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Fail");
-        //                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Fail";
-        //                    }
-        //                    await ProgressStatus.MessageStatus(
-        //                        progress,
-        //                        stage,
-        //                        message
-        //                        );
-        //                }
-        //            }
-        //        }
-        //        finally
-        //        {
-        //            semaphore.Release();
-        //        }
-        //    });
-        //    await Task.WhenAll(tasks);
-        //}
-        public async Task<List<DeviceCommandResult>> AdbExecuteOnAllDevices(
-            Func<DeviceReport, string> buildArguments, 
-            IProgress<ProgressStatus> progress,
-            string stage,
-            bool waitForJob
-            )
-        {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
-            var semaphore = new SemaphoreSlim(2);
-
-            var tasks = snapshot.Select(async d =>
-            {
-                await semaphore.WaitAsync();
-                try
-                {
-                    DeviceJobResult? job = null;
-                    var message = string.Empty;
-                    var arguments = buildArguments(d.Value);
-                    _deviceManager.UpdateStatus(d.Value.Ip, stage);
-                    var command = await ExecuteCommandOnDevice(d.Key, arguments);
-                    
-                    if (waitForJob)
-                    {
-                        job = await _jobTracker.WaitForCompletion(d.Key);
-                    }
-                    else
-                    {
-                        job = new DeviceJobResult
-                        {
-                            JobId = d.Key,
-                            ExitCode = 0,
-                            Output = command.Output
-                        };
-                        _jobTracker.Complete(job);
-                    }
-                    if (ParseResult(job.Output))
-                    {
-                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Success");
-                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Success";
-                    }
-                    else
-                    {
-                        _deviceManager.UpdateStatus(d.Value.Ip, $"{stage} Fail");
-                        message = $"{d.Key} - {stage} of {d.Value.Bundle} Fail";
-                    }
-                    await ProgressStatus.MessageStatus(
-                        progress,
-                        stage,
-                        message
-                        );
-                    return command;
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            });
-            var output = await Task.WhenAll(tasks);
-            return [.. output];
         }
         public async Task<DeviceCommandResult> ExecuteCommandOnDevice(string ip, string arguments)
         {
@@ -316,73 +194,65 @@ namespace EasyConnect.Services
                 };
             }
         }
-        public async Task<(int ExitCode, string Output)> AdbCurrentDevices()
-        {
-            var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"devices");
-            if (ExitCode != 0)
-                return (-1, "ERROR al encontrar dispositivos conectados, intente de nuevo o empareje uno");
-            var matches = Regex.Matches(Output, @"(\d+\.\d+\.\d+\.\d+):\d+");
-            foreach (Match match in matches)
-            {
-                string ipAddress = match.Groups[1].Value;
-                if (!_deviceManager.DevicesDictionary.ContainsKey(ipAddress))
-                {
-                    DeviceReport newDevice = new DeviceReport(ipAddress);
-                    _deviceManager.AddDevice(newDevice);
-                }
-            }
-            return (ExitCode, Output);
-        }
-        public async Task AdbWebSocketConnection(IProgress<ProgressStatus> progress, string serverIp, string? deviceIp = null)
+        public async Task AdbWebSocketConnection(string serverIp, long jobId, string? deviceIp = null)
         {
             if (deviceIp != null)
             {
-                var result = _deviceManager.GetDevice(deviceIp, out var device);
+                var result = _deviceManager.GetReport(deviceIp, out var device);
                 if (result && device != null)
                 {
                     var argument = $"shell am start-foreground-service " +
-                        $"-n com.easyconnect.agent/.WebSocketService " +
-                        $"--es webSocketUrl ws://{serverIp}:8181 ";
-                    await ExecuteCommandOnDevice(deviceIp, argument);
-                }
-                return;
-            }
-            //await AdbExecuteOnAllDevices(device =>
-            //    $"shell am start-foreground-service " +
-            //    $"-n com.easyconnect.agent/.WebSocketService " +
-            //    $"--es webSocketUrl ws://{serverIp}:8181 " +
-            //    $"--es serialNumber {device.SerialNumber}",
-            //    progress,
-            //    "WEBSOCKET",
-            //    true
-            //);
-        }
-        public async Task AdbStopWebSocketConnection(IProgress<ProgressStatus> progress, string serverIp, string? deviceIp = null)
-        {
-            if (deviceIp != null)
-            {
-                var result = _deviceManager.GetDevice(deviceIp, out var device);
-                if (result && device != null)
-                {
-                    var argument = $"shell am start-foreground-service " +
-                        $"-n com.easyconnect.agent/.WebSocketService " +
+                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
+                        $"--es TARGET_SERVICE START_WEBSOCKET_SERVICE " +
                         $"--es webSocketUrl ws://{serverIp}:8181 " +
-                        $"--es serialNumber {device.SerialNumber} " +
-                        $"--es stop true";
+                        $"--el registerJobId {jobId}";
                     await ExecuteCommandOnDevice(deviceIp, argument);
                 }
                 return;
             }
-            //await AdbExecuteOnAllDevices(device =>
-            //    $"shell am start-foreground-service " +
-            //    $"-n com.easyconnect.agent/.WebSocketService " +
-            //    $"--es webSocketUrl ws://{serverIp}:8181 " +
-            //    $"--es serialNumber {device.SerialNumber} " +
-            //    $"--es stop true",
-            //    progress,
-            //    "WEBSOCKET",
-            //    true
-            //);
+        }
+        public async Task AdbStopWebSocketConnection(string serverIp, string? deviceIp = null)
+        {
+            if (deviceIp != null)
+            {
+                var result = _deviceManager.GetReport(deviceIp, out var device);
+                if (result && device != null)
+                {
+                    var argument = $"shell am start-foreground-service " +
+                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
+                        $"--es TARGET_SERVICE START_WEBSOCKET_SERVICE " +
+                        $"--ez stopWebSocket true";
+                    await ExecuteCommandOnDevice(deviceIp, argument);
+                }
+                return;
+            }
+        }
+        public async Task<DeviceCommandResult> AdbStartExperience(string bundle, string? deviceIp = null)
+        {
+            if (deviceIp != null)
+            {
+                var result = _deviceManager.GetReport(deviceIp, out var device);
+                if (result && device != null)
+                {
+                    var argument = $"shell am start-foreground-service " +
+                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
+                        $"--es TARGET_SERVICE START_EXPERIENCE " +
+                        $"--es bundle {bundle}";
+                    await ExecuteCommandOnDevice(deviceIp, argument);
+                }
+                return new DeviceCommandResult
+                {
+                    Ip = deviceIp,
+                    ExitCode = 0,
+                    Output = "SUCCESS START ACTIVITY",
+                };
+            }
+            return new DeviceCommandResult
+            {
+                Ip = deviceIp ?? "",
+                ExitCode = -1,
+                Output = "FAIL START ACTIVITY",
+            };
         }
         private bool ParseAdbConnectResult(string output)
         {
@@ -398,13 +268,6 @@ namespace EasyConnect.Services
                 return true;
             if (!string.IsNullOrEmpty(output))
                 return false;
-            return false;
-        }
-        private bool ParseResult(string output)
-        {
-            if (output.Contains("Success", StringComparison.CurrentCultureIgnoreCase) ||
-                string.IsNullOrWhiteSpace(output))
-                return true;
             return false;
         }
     }

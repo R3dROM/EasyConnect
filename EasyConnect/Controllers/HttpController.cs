@@ -1,19 +1,31 @@
-﻿using EasyConnect.Models;
+﻿using EasyConnect.Managers;
+using EasyConnect.Models;
 using EasyConnect.Services;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EasyConnect.Controllers
 {
     public class HttpController
         (
-        NetworkService networkService
+        NetworkService networkService,
+        DeviceManager deviceManager
         )
     {
         private readonly NetworkService _NetworkServices = networkService;
-
+        private readonly DeviceManager _DeviceManager = deviceManager;
+        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+            {
+                new JsonStringEnumConverter()
+            }
+        };
 
         private HttpListener? _HttpListener;
 
@@ -107,10 +119,6 @@ namespace EasyConnect.Controllers
             _HttpListener.Prefixes.Add("http://127.0.0.1:7777/");
             _HttpListener.Start();
 
-            JsonSerializerOptions options = new()
-            {
-                WriteIndented = true
-            };
             SemaphoreSlim sempahore = new(10);
             while (true)
             {
@@ -121,7 +129,7 @@ namespace EasyConnect.Controllers
                 {
                     try
                     {
-                        await HandleRequest(context, options);
+                        await HandleRequest(context);
                     }
                     catch
                     {
@@ -134,39 +142,74 @@ namespace EasyConnect.Controllers
                 });
             }
         }
-        private async Task HandleRequest(HttpListenerContext context, JsonSerializerOptions options)
+        private async Task HandleRequest(HttpListenerContext context)
         {
-            try
-            {
-                if (context.Request.HttpMethod == "PUT")
-                {
-                    using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
-                    string json = await reader.ReadToEndAsync();
-                    var basePath = context.Request.Headers["X-Base-Path"];
-                    var urlPath = context.Request.Url!.LocalPath;
-                    Debug.WriteLine($"{basePath}/{urlPath}");
-                    var fullPath = Path.Combine(
-                        basePath!,
-                        urlPath.TrimStart('/').Replace("/", "\\")
-                        );
+            //try
+            //{
+            //    if (context.Request.HttpMethod == "POST")
+            //    {
+            //        using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
+            //        string json = await reader.ReadToEndAsync();
+            //        var jsonToMessage = JsonSerializer.Deserialize<DeploymentInformation>(json, _jsonSerializerOptions);
+            //        Debug.WriteLine(json);
+            //        _DeviceManager.AddDeviceFromMessageInfo(jsonToMessage);
+            //    }
+            //    else if (context.Request.HttpMethod == "PUT")
+            //    {
+            //        using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
+            //        string json = await reader.ReadToEndAsync();
+            //        var basePath = context.Request.Headers["X-Base-Path"];
+            //        var urlPath = context.Request.Url!.LocalPath;
+            //        Debug.WriteLine($"{basePath}/{urlPath}");
+            //        var fullPath = Path.Combine(
+            //            basePath!,
+            //            urlPath.TrimStart('/').Replace("/", "\\")
+            //            );
 
-                    fullPath = Path.GetFullPath(fullPath);
+            //        fullPath = Path.GetFullPath(fullPath);
 
-                    await File.WriteAllTextAsync(fullPath, json);
-                }
-                else
+            //        await File.WriteAllTextAsync(fullPath, json);
+            //    }
+            //    else
+            //    {
+            //        context.Response.StatusCode = 405;
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    context.Response.StatusCode = 500;
+            //    throw new Exception($"ERROR", ex);
+            //}
+            //finally
+            //{
+            //    context.Response.Close();
+            //}
+        }
+        public async Task sendUdpPacket()
+        {
+            using var udpClient = new UdpClient();
+            udpClient.EnableBroadcast = true;
+            var json_raw = new
+            {
+                status = "Server Ready",
+                portWebSocket = _NetworkServices.WebSocketPort,
+                portDownloads = _NetworkServices.ServerPort,
+                ipServer = _NetworkServices.ServerIp
+            };
+            string json = JsonSerializer.Serialize(json_raw);
+            while (true)
+            {
+                try
                 {
-                    context.Response.StatusCode = 405;
+                    byte[] data = Encoding.ASCII.GetBytes(json);
+                    
+                    await udpClient.SendAsync(data, "192.168.1.255", 11000);
                 }
-            }
-            catch (Exception ex)
-            {
-                context.Response.StatusCode = 500;
-                throw new Exception($"ERROR", ex);
-            }
-            finally
-            {
-                context.Response.Close();
+                catch (ObjectDisposedException)
+                {
+                    Console.WriteLine("UdpClient has been closed.");
+                }
+                await Task.Delay(5000);
             }
         }
     }

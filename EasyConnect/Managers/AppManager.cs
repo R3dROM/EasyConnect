@@ -1,9 +1,10 @@
 ﻿using EasyConnect.Controllers;
 using EasyConnect.Models;
+using EasyConnect.Services;
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace EasyConnect.Services
+namespace EasyConnect.Managers
 {
     public class AppManager(
         NetworkService network,
@@ -13,6 +14,16 @@ namespace EasyConnect.Services
         DeviceManager deviceManager) : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        private readonly DeviceManager _deviceManager = deviceManager;
+        private readonly NetworkService _network = network;
+        private readonly WebSocketService _websocket = websocket;
+        private readonly AdbService _adb = adb;
+        private readonly HttpController _http = http;
+
+        private readonly OpenFileDialog _openFileDialog = new();
+        private readonly FolderBrowserDialog _folderBrowserDialog = new();
+        public States _currentState { get; set; } = States.NotInitialized;
 
         private ListBox? _listBoxLogs;
         public ListBox? ListBoxLogs
@@ -53,45 +64,64 @@ namespace EasyConnect.Services
                 }
             }
         }
-        private readonly DeviceManager _deviceManager = deviceManager;
-        private readonly NetworkService _network = network;
-        private readonly WebSocketService _websocket = websocket;
-        private readonly AdbService _adb = adb;
-        private readonly HttpController _http = http;
+        public void FolderBrowser(Action<string?> assing)
+        {
+            DialogResult dialogResult = _folderBrowserDialog.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                var selectedPath = _folderBrowserDialog.SelectedPath;
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    assing(selectedPath);
+                }
+            }
+        }
+        public void FileBrowser(Action<string?> assing)
+        {
+            DialogResult dialogResult = _openFileDialog.ShowDialog();
+            if (dialogResult == DialogResult.OK)
+            {
+                var selectedPath = _openFileDialog.FileName;
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    assing(selectedPath);
+                }
+            }
+        }
 
-        public async Task StartAsync(IProgress<ProgressStatus> progress)
+        public async Task StartAsync(IProgress<ProgressStatus<Stages>> progress)
         {
             try
             {
-                progress.Report(new ProgressStatus
+                progress.Report(new ProgressStatus<Stages>
                 {
                     Percent = 0,
-                    Stage = "Starting services",
+                    Stage = Stages.Start,
                     Description = "Starting all the services to run the application",
                     IsCompleted = false
                 });
 
-                await ProgressStatus.Step(progress, 10, 40, "ADB",
+                await ProgressStatusService.Step(progress, 10, 40, Stages.Start,
                     "Starting ADB service",
                     "ADB service ready",
                     () => _adb.ResetAdb());
-                await ProgressStatus.Step(progress, 40, 60, "Network",
+                await ProgressStatusService.Step(progress, 40, 60, Stages.Start,
                     "Starting Network service",
                     "Network service ready",
                     () => _network.StartServerNetwork());
-                await ProgressStatus.Step(progress, 60, 80, "Websocket",
+                await ProgressStatusService.Step(progress, 60, 80, Stages.Start,
                     "Starting Websocket service",
                     "Websocket service ready",
                     () => _websocket.StartAsync());
-                await ProgressStatus.Step(progress, 80, 100, "HTTP",
+                await ProgressStatusService.Step(progress, 80, 100, Stages.Start,
                     "Starting HTTP service",
                     "HTTP listener/Handler service ready",
                     () => _http.StartServerListener());
 
-                progress.Report(new ProgressStatus
+                progress.Report(new ProgressStatus<Stages>
                 {
                     Percent = 100,
-                    Stage = "Starting services",
+                    Stage = Stages.Start,
                     Description = "All Services ready",
                     IsCompleted = true
                 });
@@ -103,35 +133,13 @@ namespace EasyConnect.Services
             }
         }
 
-        public async Task StartEventSubscribeAsync(SynchronizationContext _UiContext)
-        {
-            await Task.Run(() =>
-            {
-                _deviceManager.DeviceAdded += device =>
-                {
-                    _UiContext.Post(_ => _adb.DevicesBindingList.Add(device), null);
-                };
-                _deviceManager.DeviceUpdated += device =>
-                {
-                    var existing = _adb.DevicesBindingList.FirstOrDefault(d => d.Ip == device.Ip);
-                    if (existing != null)
-                        _UiContext.Post(_ => existing.UpdateFromDeviceReport(device), null);
-                };
-                _deviceManager.DeviceRemoved += device =>
-                {
-                    var existing = _adb.DevicesBindingList.FirstOrDefault(d => d.Ip == device.Ip);
-                    if (existing != null)
-                        _UiContext.Post(_ => _adb.DevicesBindingList.Remove(existing), null);
-                };
-            });
-        }
         public void ListBoxLogs_DrawItem(object sender, DrawItemEventArgs e)
         {
             if (e.Index < 0 || _listBoxLogs == null) return;
 
             e.DrawBackground();
 
-            if (_listBoxLogs.Items[e.Index] is ProgressStatus status)
+            if (_listBoxLogs.Items[e.Index] is ProgressStatus<Stages> status)
             {
                 // Selección
                 Color bgColor = (e.State & DrawItemState.Selected) != 0
@@ -172,7 +180,6 @@ namespace EasyConnect.Services
                 throw new Exception($"ERROR AL CERRAR!! ", ex);
             }
         }
-
         protected void OnPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
