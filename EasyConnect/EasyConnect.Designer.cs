@@ -1,4 +1,6 @@
-﻿namespace EasyConnect
+﻿using EasyConnect.Managers;
+
+namespace EasyConnect
 {
     partial class WINDOW
     {
@@ -40,44 +42,50 @@
             textBoxIP = new TextBox();
             labelPort = new Label();
             labelIP = new Label();
-            buttonAUTOSCANN = new Button();
             buttonCONNECT = new Button();
             groupBoxSERVER = new GroupBox();
+            buttonSTARTEXPERIENCE = new Button();
+            CANCEL = new Button();
+            numericUpDownDEVICESDEPLOYMENT = new NumericUpDown();
+            label1 = new Label();
             buttonDeploy = new Button();
             buttonUninstall = new Button();
-            buttonINSTALL = new Button();
-            buttonWEBSOCKETCONNECTION = new Button();
-            buttonRESETADB = new Button();
-            buttonMOVE = new Button();
-            buttonDOWNLOAD = new Button();
-            buttonNETWORKING = new Button();
-            label3 = new Label();
-            textBoxNEWDEVICE = new TextBox();
-            labelBUNDLEID = new Label();
-            listBoxLogs = new ListBox();
             labelCURRENTIP = new Label();
             labelIPDEVICE = new Label();
-            groupBoxDEVICES = new GroupBox();
-            dataGridView1 = new DataGridView();
+            textBoxServerIp = new TextBox();
+            labelServerIp = new Label();
+            labelBUNDLEID = new Label();
             labelBUNDLE = new Label();
+            listBoxLogs = new ListBox();
+            groupBoxDEVICES = new GroupBox();
+            counter = new Label();
+            dataGridView1 = new DataGridView();
+            deviceManagerBindingSource = new BindingSource(components);
+            deviceInfoBindingSource = new BindingSource(components);
+            adbServiceBindingSource1 = new BindingSource(components);
             deviceReportBindingSource = new BindingSource(components);
             adbServiceBindingSource = new BindingSource(components);
-            adbServiceBindingSource1 = new BindingSource(components);
             groupBox1 = new GroupBox();
-            groupBox2 = new GroupBox();
+            buttonDisconnect = new Button();
             progressBar = new ProgressBar();
-            labelServerIp = new Label();
-            textBoxServerIp = new TextBox();
-            buttonGenerate = new Button();
+            fileSystemWatcher1 = new FileSystemWatcher();
+            labelAPKNAME = new Label();
+            labelAPK = new Label();
+            buttonDeployPath = new Button();
+            deployPath = new TextBox();
+            label3 = new Label();
             groupIPConnect.SuspendLayout();
             groupBoxSERVER.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownDEVICESDEPLOYMENT).BeginInit();
             groupBoxDEVICES.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)deviceManagerBindingSource).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)deviceInfoBindingSource).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)deviceReportBindingSource).BeginInit();
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).BeginInit();
             groupBox1.SuspendLayout();
-            groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher1).BeginInit();
             SuspendLayout();
             // 
             // groupIPConnect
@@ -86,21 +94,21 @@
             groupIPConnect.Controls.Add(textBoxIP);
             groupIPConnect.Controls.Add(labelPort);
             groupIPConnect.Controls.Add(labelIP);
-            groupIPConnect.Location = new Point(68, 51);
+            groupIPConnect.Location = new Point(166, 12);
             groupIPConnect.Margin = new Padding(3, 2, 3, 2);
             groupIPConnect.Name = "groupIPConnect";
             groupIPConnect.Padding = new Padding(3, 2, 3, 2);
-            groupIPConnect.Size = new Size(245, 102);
+            groupIPConnect.Size = new Size(435, 76);
             groupIPConnect.TabIndex = 1;
             groupIPConnect.TabStop = false;
             groupIPConnect.Text = "Headset";
             // 
             // textBoxPORT
             // 
-            textBoxPORT.Location = new Point(76, 60);
+            textBoxPORT.Location = new Point(303, 22);
             textBoxPORT.Margin = new Padding(3, 2, 3, 2);
             textBoxPORT.Name = "textBoxPORT";
-            textBoxPORT.Size = new Size(100, 32);
+            textBoxPORT.Size = new Size(100, 27);
             textBoxPORT.TabIndex = 3;
             textBoxPORT.Text = "5555";
             textBoxPORT.TextAlign = HorizontalAlignment.Center;
@@ -111,16 +119,16 @@
             textBoxIP.Location = new Point(76, 22);
             textBoxIP.Margin = new Padding(3, 2, 3, 2);
             textBoxIP.Name = "textBoxIP";
-            textBoxIP.Size = new Size(151, 32);
+            textBoxIP.Size = new Size(151, 27);
             textBoxIP.TabIndex = 2;
             textBoxIP.TextChanged += textBoxIP_TextChanged;
             // 
             // labelPort
             // 
             labelPort.AutoSize = true;
-            labelPort.Location = new Point(7, 67);
+            labelPort.Location = new Point(234, 29);
             labelPort.Name = "labelPort";
-            labelPort.Size = new Size(51, 20);
+            labelPort.Size = new Size(42, 16);
             labelPort.TabIndex = 1;
             labelPort.Text = "PORT:";
             // 
@@ -129,27 +137,16 @@
             labelIP.AutoSize = true;
             labelIP.Location = new Point(33, 30);
             labelIP.Name = "labelIP";
-            labelIP.Size = new Size(27, 20);
+            labelIP.Size = new Size(22, 16);
             labelIP.TabIndex = 0;
             labelIP.Text = "IP:";
             // 
-            // buttonAUTOSCANN
-            // 
-            buttonAUTOSCANN.Location = new Point(192, 23);
-            buttonAUTOSCANN.Margin = new Padding(3, 2, 3, 2);
-            buttonAUTOSCANN.Name = "buttonAUTOSCANN";
-            buttonAUTOSCANN.Size = new Size(137, 31);
-            buttonAUTOSCANN.TabIndex = 12;
-            buttonAUTOSCANN.Text = "AUTO SCAN";
-            buttonAUTOSCANN.UseVisualStyleBackColor = true;
-            buttonAUTOSCANN.Click += buttonAUTOSCANN_Click;
-            // 
             // buttonCONNECT
             // 
-            buttonCONNECT.Location = new Point(59, 23);
+            buttonCONNECT.Location = new Point(87, 21);
             buttonCONNECT.Margin = new Padding(3, 2, 3, 2);
             buttonCONNECT.Name = "buttonCONNECT";
-            buttonCONNECT.Size = new Size(109, 31);
+            buttonCONNECT.Size = new Size(140, 30);
             buttonCONNECT.TabIndex = 4;
             buttonCONNECT.Text = "CONNECT";
             buttonCONNECT.UseVisualStyleBackColor = true;
@@ -157,36 +154,77 @@
             // 
             // groupBoxSERVER
             // 
+            groupBoxSERVER.Controls.Add(buttonSTARTEXPERIENCE);
+            groupBoxSERVER.Controls.Add(CANCEL);
+            groupBoxSERVER.Controls.Add(numericUpDownDEVICESDEPLOYMENT);
+            groupBoxSERVER.Controls.Add(label1);
             groupBoxSERVER.Controls.Add(buttonDeploy);
             groupBoxSERVER.Controls.Add(buttonUninstall);
-            groupBoxSERVER.Controls.Add(buttonINSTALL);
-            groupBoxSERVER.Controls.Add(buttonWEBSOCKETCONNECTION);
-            groupBoxSERVER.Controls.Add(buttonRESETADB);
-            groupBoxSERVER.Controls.Add(buttonMOVE);
-            groupBoxSERVER.Controls.Add(buttonDOWNLOAD);
-            groupBoxSERVER.Controls.Add(buttonNETWORKING);
-            groupBoxSERVER.Location = new Point(473, 52);
+            groupBoxSERVER.Controls.Add(labelCURRENTIP);
+            groupBoxSERVER.Controls.Add(labelIPDEVICE);
+            groupBoxSERVER.Location = new Point(629, 12);
             groupBoxSERVER.Margin = new Padding(3, 2, 3, 2);
             groupBoxSERVER.Name = "groupBoxSERVER";
             groupBoxSERVER.Padding = new Padding(3, 2, 3, 2);
-            groupBoxSERVER.Size = new Size(361, 166);
+            groupBoxSERVER.Size = new Size(254, 262);
             groupBoxSERVER.TabIndex = 2;
             groupBoxSERVER.TabStop = false;
             groupBoxSERVER.Text = "Actions";
             // 
+            // buttonSTARTEXPERIENCE
+            // 
+            buttonSTARTEXPERIENCE.Location = new Point(45, 206);
+            buttonSTARTEXPERIENCE.Margin = new Padding(3, 2, 3, 2);
+            buttonSTARTEXPERIENCE.Name = "buttonSTARTEXPERIENCE";
+            buttonSTARTEXPERIENCE.Size = new Size(170, 30);
+            buttonSTARTEXPERIENCE.TabIndex = 23;
+            buttonSTARTEXPERIENCE.Text = "START EXPERIENCE";
+            buttonSTARTEXPERIENCE.UseVisualStyleBackColor = true;
+            buttonSTARTEXPERIENCE.Click += buttonSTARTEXPERIENCE_Click;
+            // 
+            // CANCEL
+            // 
+            CANCEL.Location = new Point(45, 137);
+            CANCEL.Name = "CANCEL";
+            CANCEL.Size = new Size(170, 30);
+            CANCEL.TabIndex = 22;
+            CANCEL.Text = "CANCEL DEPLOY";
+            CANCEL.UseVisualStyleBackColor = true;
+            CANCEL.Click += CANCEL_Click;
+            // 
+            // numericUpDownDEVICESDEPLOYMENT
+            // 
+            numericUpDownDEVICESDEPLOYMENT.Location = new Point(191, 52);
+            numericUpDownDEVICESDEPLOYMENT.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
+            numericUpDownDEVICESDEPLOYMENT.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDownDEVICESDEPLOYMENT.Name = "numericUpDownDEVICESDEPLOYMENT";
+            numericUpDownDEVICESDEPLOYMENT.Size = new Size(50, 27);
+            numericUpDownDEVICESDEPLOYMENT.TabIndex = 20;
+            numericUpDownDEVICESDEPLOYMENT.TextAlign = HorizontalAlignment.Center;
+            numericUpDownDEVICESDEPLOYMENT.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(18, 55);
+            label1.Name = "label1";
+            label1.Size = new Size(140, 16);
+            label1.TabIndex = 15;
+            label1.Text = "MAX DEVICES DEPLOY:";
+            // 
             // buttonDeploy
             // 
-            buttonDeploy.Location = new Point(182, 125);
+            buttonDeploy.Location = new Point(45, 101);
             buttonDeploy.Name = "buttonDeploy";
             buttonDeploy.Size = new Size(170, 30);
             buttonDeploy.TabIndex = 16;
-            buttonDeploy.Text = "DEPLOY";
+            buttonDeploy.Text = "START DEPLOY";
             buttonDeploy.UseVisualStyleBackColor = true;
             buttonDeploy.Click += buttonDeploy_Click;
             // 
             // buttonUninstall
             // 
-            buttonUninstall.Location = new Point(182, 90);
+            buttonUninstall.Location = new Point(45, 172);
             buttonUninstall.Margin = new Padding(3, 2, 3, 2);
             buttonUninstall.Name = "buttonUninstall";
             buttonUninstall.Size = new Size(170, 30);
@@ -195,133 +233,79 @@
             buttonUninstall.UseVisualStyleBackColor = true;
             buttonUninstall.Click += buttonUninstall_Click;
             // 
-            // buttonINSTALL
-            // 
-            buttonINSTALL.Location = new Point(6, 125);
-            buttonINSTALL.Margin = new Padding(3, 2, 3, 2);
-            buttonINSTALL.Name = "buttonINSTALL";
-            buttonINSTALL.Size = new Size(170, 30);
-            buttonINSTALL.TabIndex = 9;
-            buttonINSTALL.Text = "INSTALL";
-            buttonINSTALL.UseVisualStyleBackColor = true;
-            buttonINSTALL.Click += buttonINSTALL_Click;
-            // 
-            // buttonWEBSOCKETCONNECTION
-            // 
-            buttonWEBSOCKETCONNECTION.Location = new Point(6, 20);
-            buttonWEBSOCKETCONNECTION.Margin = new Padding(3, 2, 3, 2);
-            buttonWEBSOCKETCONNECTION.Name = "buttonWEBSOCKETCONNECTION";
-            buttonWEBSOCKETCONNECTION.Size = new Size(170, 30);
-            buttonWEBSOCKETCONNECTION.TabIndex = 12;
-            buttonWEBSOCKETCONNECTION.Text = "STOP WEB SOCKET";
-            buttonWEBSOCKETCONNECTION.UseVisualStyleBackColor = true;
-            buttonWEBSOCKETCONNECTION.Click += buttonWEBSOCKETCONNECTION_Click;
-            // 
-            // buttonRESETADB
-            // 
-            buttonRESETADB.Location = new Point(182, 20);
-            buttonRESETADB.Name = "buttonRESETADB";
-            buttonRESETADB.Size = new Size(170, 30);
-            buttonRESETADB.TabIndex = 13;
-            buttonRESETADB.Text = "RESTART ADB";
-            buttonRESETADB.UseVisualStyleBackColor = true;
-            buttonRESETADB.Click += buttonRESETADB_Click;
-            // 
-            // buttonMOVE
-            // 
-            buttonMOVE.Location = new Point(6, 90);
-            buttonMOVE.Margin = new Padding(3, 2, 3, 2);
-            buttonMOVE.Name = "buttonMOVE";
-            buttonMOVE.Size = new Size(170, 30);
-            buttonMOVE.TabIndex = 8;
-            buttonMOVE.Text = "MOVE";
-            buttonMOVE.UseVisualStyleBackColor = true;
-            buttonMOVE.Click += buttonMOVE_Click;
-            // 
-            // buttonDOWNLOAD
-            // 
-            buttonDOWNLOAD.Location = new Point(182, 54);
-            buttonDOWNLOAD.Margin = new Padding(3, 2, 3, 2);
-            buttonDOWNLOAD.Name = "buttonDOWNLOAD";
-            buttonDOWNLOAD.Size = new Size(170, 30);
-            buttonDOWNLOAD.TabIndex = 7;
-            buttonDOWNLOAD.Text = "DOWNLOAD";
-            buttonDOWNLOAD.UseVisualStyleBackColor = true;
-            buttonDOWNLOAD.Click += buttonDOWNLOAD_Click;
-            // 
-            // buttonNETWORKING
-            // 
-            buttonNETWORKING.Location = new Point(6, 55);
-            buttonNETWORKING.Name = "buttonNETWORKING";
-            buttonNETWORKING.Size = new Size(170, 30);
-            buttonNETWORKING.TabIndex = 14;
-            buttonNETWORKING.Text = "CONFIGURATION";
-            buttonNETWORKING.UseVisualStyleBackColor = true;
-            buttonNETWORKING.Click += buttonNETWORKING_Click;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Location = new Point(6, 27);
-            label3.Name = "label3";
-            label3.Size = new Size(54, 20);
-            label3.TabIndex = 13;
-            label3.Text = "CODE:";
-            // 
-            // textBoxNEWDEVICE
-            // 
-            textBoxNEWDEVICE.Location = new Point(63, 21);
-            textBoxNEWDEVICE.Margin = new Padding(4, 5, 4, 5);
-            textBoxNEWDEVICE.Name = "textBoxNEWDEVICE";
-            textBoxNEWDEVICE.Size = new Size(72, 32);
-            textBoxNEWDEVICE.TabIndex = 7;
-            textBoxNEWDEVICE.TextChanged += textBoxNEWDEVICE_TextChanged;
-            // 
-            // labelBUNDLEID
-            // 
-            labelBUNDLEID.AutoSize = true;
-            labelBUNDLEID.Location = new Point(68, 231);
-            labelBUNDLEID.Name = "labelBUNDLEID";
-            labelBUNDLEID.Size = new Size(93, 20);
-            labelBUNDLEID.TabIndex = 10;
-            labelBUNDLEID.Text = "BUNDLE ID:";
-            labelBUNDLEID.TextAlign = ContentAlignment.BottomLeft;
-            // 
-            // listBoxLogs
-            // 
-            listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            listBoxLogs.FormattingEnabled = true;
-            listBoxLogs.HorizontalScrollbar = true;
-            listBoxLogs.Location = new Point(32, 564);
-            listBoxLogs.Margin = new Padding(3, 2, 3, 2);
-            listBoxLogs.Name = "listBoxLogs";
-            listBoxLogs.Size = new Size(857, 164);
-            listBoxLogs.TabIndex = 6;
-            listBoxLogs.SelectedIndexChanged += listBoxFILENAMES_SelectedIndexChanged;
-            // 
             // labelCURRENTIP
             // 
             labelCURRENTIP.AutoSize = true;
-            labelCURRENTIP.Location = new Point(117, 29);
+            labelCURRENTIP.Location = new Point(15, 20);
             labelCURRENTIP.Name = "labelCURRENTIP";
-            labelCURRENTIP.Size = new Size(101, 20);
+            labelCURRENTIP.Size = new Size(82, 16);
             labelCURRENTIP.TabIndex = 3;
             labelCURRENTIP.Text = "CURRENT IP:";
             // 
             // labelIPDEVICE
             // 
             labelIPDEVICE.AutoSize = true;
-            labelIPDEVICE.Location = new Point(216, 29);
+            labelIPDEVICE.Location = new Point(114, 20);
             labelIPDEVICE.Name = "labelIPDEVICE";
-            labelIPDEVICE.Size = new Size(33, 20);
+            labelIPDEVICE.Size = new Size(58, 16);
             labelIPDEVICE.TabIndex = 4;
-            labelIPDEVICE.Text = "aaa";
-            labelIPDEVICE.Click += labelIPDEVICE_Click;
+            labelIPDEVICE.Text = "127.0.0.1";
+            // 
+            // textBoxServerIp
+            // 
+            textBoxServerIp.Location = new Point(289, 171);
+            textBoxServerIp.Name = "textBoxServerIp";
+            textBoxServerIp.Size = new Size(147, 27);
+            textBoxServerIp.TabIndex = 18;
+            textBoxServerIp.TextChanged += textBoxServerIp_TextChanged;
+            // 
+            // labelServerIp
+            // 
+            labelServerIp.AutoSize = true;
+            labelServerIp.Location = new Point(169, 174);
+            labelServerIp.Name = "labelServerIp";
+            labelServerIp.Size = new Size(71, 16);
+            labelServerIp.TabIndex = 17;
+            labelServerIp.Text = "SERVER IP:";
+            labelServerIp.TextAlign = ContentAlignment.BottomLeft;
+            // 
+            // labelBUNDLEID
+            // 
+            labelBUNDLEID.AutoSize = true;
+            labelBUNDLEID.Location = new Point(169, 254);
+            labelBUNDLEID.Name = "labelBUNDLEID";
+            labelBUNDLEID.Size = new Size(75, 16);
+            labelBUNDLEID.TabIndex = 10;
+            labelBUNDLEID.Text = "BUNDLE ID:";
+            labelBUNDLEID.TextAlign = ContentAlignment.BottomLeft;
+            // 
+            // labelBUNDLE
+            // 
+            labelBUNDLE.AutoSize = true;
+            labelBUNDLE.Location = new Point(289, 254);
+            labelBUNDLE.Margin = new Padding(4, 0, 4, 0);
+            labelBUNDLE.Name = "labelBUNDLE";
+            labelBUNDLE.Size = new Size(83, 16);
+            labelBUNDLE.TabIndex = 11;
+            labelBUNDLE.Text = "com.exam.ple";
+            // 
+            // listBoxLogs
+            // 
+            listBoxLogs.DrawMode = DrawMode.OwnerDrawFixed;
+            listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            listBoxLogs.FormattingEnabled = true;
+            listBoxLogs.HorizontalScrollbar = true;
+            listBoxLogs.Location = new Point(86, 602);
+            listBoxLogs.Margin = new Padding(3, 2, 3, 2);
+            listBoxLogs.Name = "listBoxLogs";
+            listBoxLogs.Size = new Size(857, 116);
+            listBoxLogs.TabIndex = 6;
             // 
             // groupBoxDEVICES
             // 
+            groupBoxDEVICES.Controls.Add(counter);
             groupBoxDEVICES.Controls.Add(dataGridView1);
-            groupBoxDEVICES.Location = new Point(29, 294);
+            groupBoxDEVICES.Location = new Point(83, 327);
             groupBoxDEVICES.Margin = new Padding(3, 2, 3, 2);
             groupBoxDEVICES.Name = "groupBoxDEVICES";
             groupBoxDEVICES.Padding = new Padding(3, 2, 3, 2);
@@ -330,10 +314,17 @@
             groupBoxDEVICES.TabStop = false;
             groupBoxDEVICES.Text = "DEVICES";
             // 
+            // counter
+            // 
+            counter.AutoSize = true;
+            counter.Location = new Point(86, 0);
+            counter.Name = "counter";
+            counter.Size = new Size(14, 16);
+            counter.TabIndex = 23;
+            counter.Text = "0";
+            // 
             // dataGridView1
             // 
-            dataGridView1.AllowUserToAddRows = false;
-            dataGridView1.AllowUserToDeleteRows = false;
             dataGridView1.AllowUserToOrderColumns = true;
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridView1.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
@@ -362,7 +353,6 @@
             dataGridView1.MaximumSize = new Size(1100, 225);
             dataGridView1.MultiSelect = false;
             dataGridView1.Name = "dataGridView1";
-            dataGridView1.ReadOnly = true;
             dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridViewCellStyle4.BackColor = SystemColors.Control;
             dataGridViewCellStyle4.Font = new Font("Yu Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
@@ -381,100 +371,120 @@
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridView1.Size = new Size(846, 225);
             dataGridView1.TabIndex = 1;
-            dataGridView1.CellContentClick += dataGridView1_CellContentClick;
             // 
-            // labelBUNDLE
+            // deviceManagerBindingSource
             // 
-            labelBUNDLE.AutoSize = true;
-            labelBUNDLE.Location = new Point(166, 230);
-            labelBUNDLE.Margin = new Padding(4, 0, 4, 0);
-            labelBUNDLE.Name = "labelBUNDLE";
-            labelBUNDLE.Size = new Size(103, 20);
-            labelBUNDLE.TabIndex = 11;
-            labelBUNDLE.Text = "com.exam.ple";
-            labelBUNDLE.Click += labelBUNDLE_Click;
+            deviceManagerBindingSource.DataSource = typeof(DeviceManager);
+            // 
+            // deviceInfoBindingSource
+            // 
+            deviceInfoBindingSource.DataSource = typeof(Models.DeviceInfo);
             // 
             // groupBox1
             // 
-            groupBox1.Controls.Add(buttonAUTOSCANN);
+            groupBox1.Controls.Add(buttonDisconnect);
             groupBox1.Controls.Add(buttonCONNECT);
-            groupBox1.Location = new Point(68, 157);
+            groupBox1.Location = new Point(166, 101);
             groupBox1.Margin = new Padding(3, 2, 3, 2);
             groupBox1.Name = "groupBox1";
             groupBox1.Padding = new Padding(3, 2, 3, 2);
-            groupBox1.Size = new Size(399, 61);
+            groupBox1.Size = new Size(435, 61);
             groupBox1.TabIndex = 13;
             groupBox1.TabStop = false;
             groupBox1.Text = "Connection";
             // 
-            // groupBox2
+            // buttonDisconnect
             // 
-            groupBox2.Controls.Add(label3);
-            groupBox2.Controls.Add(textBoxNEWDEVICE);
-            groupBox2.Location = new Point(319, 51);
-            groupBox2.Margin = new Padding(3, 2, 3, 2);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Padding = new Padding(3, 2, 3, 2);
-            groupBox2.Size = new Size(148, 60);
-            groupBox2.TabIndex = 14;
-            groupBox2.TabStop = false;
-            groupBox2.Text = "Android";
+            buttonDisconnect.Location = new Point(236, 21);
+            buttonDisconnect.Margin = new Padding(3, 2, 3, 2);
+            buttonDisconnect.Name = "buttonDisconnect";
+            buttonDisconnect.Size = new Size(153, 30);
+            buttonDisconnect.TabIndex = 13;
+            buttonDisconnect.Text = "DISCONNECT";
+            buttonDisconnect.UseVisualStyleBackColor = true;
+            buttonDisconnect.Click += buttonDisconnect_Click;
             // 
             // progressBar
             // 
-            progressBar.Location = new Point(32, 746);
+            progressBar.Location = new Point(86, 742);
             progressBar.Name = "progressBar";
-            progressBar.Size = new Size(850, 29);
+            progressBar.Size = new Size(857, 29);
             progressBar.TabIndex = 16;
             // 
-            // labelServerIp
+            // fileSystemWatcher1
             // 
-            labelServerIp.AutoSize = true;
-            labelServerIp.Location = new Point(68, 262);
-            labelServerIp.Name = "labelServerIp";
-            labelServerIp.Size = new Size(88, 20);
-            labelServerIp.TabIndex = 17;
-            labelServerIp.Text = "SERVER IP:";
-            labelServerIp.TextAlign = ContentAlignment.BottomLeft;
+            fileSystemWatcher1.EnableRaisingEvents = true;
+            fileSystemWatcher1.SynchronizingObject = this;
             // 
-            // textBoxServerIp
+            // labelAPKNAME
             // 
-            textBoxServerIp.Location = new Point(166, 253);
-            textBoxServerIp.Name = "textBoxServerIp";
-            textBoxServerIp.Size = new Size(147, 32);
-            textBoxServerIp.TabIndex = 18;
-            textBoxServerIp.TextChanged += textBoxServerIp_TextChanged;
+            labelAPKNAME.AutoSize = true;
+            labelAPKNAME.Location = new Point(169, 285);
+            labelAPKNAME.Name = "labelAPKNAME";
+            labelAPKNAME.Size = new Size(72, 16);
+            labelAPKNAME.TabIndex = 19;
+            labelAPKNAME.Text = "APK NAME:";
+            labelAPKNAME.TextAlign = ContentAlignment.BottomLeft;
             // 
-            // buttonGenerate
+            // labelAPK
             // 
-            buttonGenerate.DialogResult = DialogResult.OK;
-            buttonGenerate.Location = new Point(325, 256);
-            buttonGenerate.Name = "buttonGenerate";
-            buttonGenerate.Size = new Size(140, 30);
-            buttonGenerate.TabIndex = 19;
-            buttonGenerate.Text = "GENERATE";
-            buttonGenerate.UseVisualStyleBackColor = true;
-            buttonGenerate.Click += buttonGenerate_Click;
+            labelAPK.AutoSize = true;
+            labelAPK.Location = new Point(289, 285);
+            labelAPK.Margin = new Padding(4, 0, 4, 0);
+            labelAPK.Name = "labelAPK";
+            labelAPK.Size = new Size(83, 16);
+            labelAPK.TabIndex = 20;
+            labelAPK.Text = "com.exam.ple";
+            // 
+            // buttonDeployPath
+            // 
+            buttonDeployPath.Location = new Point(442, 212);
+            buttonDeployPath.Name = "buttonDeployPath";
+            buttonDeployPath.Size = new Size(94, 29);
+            buttonDeployPath.TabIndex = 23;
+            buttonDeployPath.Text = "Browse";
+            buttonDeployPath.UseVisualStyleBackColor = true;
+            buttonDeployPath.Click += buttonDeployPath_Click;
+            // 
+            // deployPath
+            // 
+            deployPath.BackColor = SystemColors.Window;
+            deployPath.Font = new Font("Segoe UI", 9F);
+            deployPath.Location = new Point(289, 212);
+            deployPath.Name = "deployPath";
+            deployPath.ReadOnly = true;
+            deployPath.Size = new Size(147, 23);
+            deployPath.TabIndex = 22;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(169, 216);
+            label3.Name = "label3";
+            label3.Size = new Size(93, 16);
+            label3.TabIndex = 21;
+            label3.Text = "DEPLOY PATH:";
             // 
             // WINDOW
             // 
-            AutoScaleDimensions = new SizeF(120F, 120F);
+            AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoSize = true;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(917, 803);
-            Controls.Add(buttonGenerate);
-            Controls.Add(textBoxServerIp);
-            Controls.Add(labelServerIp);
+            ClientSize = new Size(1056, 803);
+            Controls.Add(buttonDeployPath);
+            Controls.Add(deployPath);
+            Controls.Add(label3);
+            Controls.Add(labelAPKNAME);
+            Controls.Add(labelAPK);
             Controls.Add(progressBar);
-            Controls.Add(groupBox2);
+            Controls.Add(textBoxServerIp);
             Controls.Add(groupBox1);
-            Controls.Add(labelBUNDLE);
-            Controls.Add(labelBUNDLEID);
+            Controls.Add(labelServerIp);
             Controls.Add(groupBoxDEVICES);
-            Controls.Add(labelIPDEVICE);
+            Controls.Add(labelBUNDLEID);
+            Controls.Add(labelBUNDLE);
             Controls.Add(listBoxLogs);
-            Controls.Add(labelCURRENTIP);
             Controls.Add(groupBoxSERVER);
             Controls.Add(groupIPConnect);
             Font = new Font("Yu Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
@@ -486,14 +496,18 @@
             groupIPConnect.ResumeLayout(false);
             groupIPConnect.PerformLayout();
             groupBoxSERVER.ResumeLayout(false);
+            groupBoxSERVER.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownDEVICESDEPLOYMENT).EndInit();
             groupBoxDEVICES.ResumeLayout(false);
+            groupBoxDEVICES.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)deviceManagerBindingSource).EndInit();
+            ((System.ComponentModel.ISupportInitialize)deviceInfoBindingSource).EndInit();
+            ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).EndInit();
             ((System.ComponentModel.ISupportInitialize)deviceReportBindingSource).EndInit();
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource).EndInit();
-            ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).EndInit();
             groupBox1.ResumeLayout(false);
-            groupBox2.ResumeLayout(false);
-            groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher1).EndInit();
             ResumeLayout(false);
             PerformLayout();
 
@@ -508,32 +522,35 @@
         private System.Windows.Forms.Button buttonCONNECT;
         private System.Windows.Forms.GroupBox groupBoxSERVER;
         private System.Windows.Forms.ListBox listBoxLogs;
-        private System.Windows.Forms.Button buttonDOWNLOAD;
         private System.Windows.Forms.Label labelCURRENTIP;
         private System.Windows.Forms.Label labelIPDEVICE;
         private System.Windows.Forms.GroupBox groupBoxDEVICES;
-        private System.Windows.Forms.Button buttonINSTALL;
-        private System.Windows.Forms.Button buttonMOVE;
         private System.Windows.Forms.Label labelBUNDLEID;
         private System.Windows.Forms.Label labelBUNDLE;
-        private System.Windows.Forms.Button buttonAUTOSCANN;
-        private System.Windows.Forms.Button buttonWEBSOCKETCONNECTION;
         private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.BindingSource adbServiceBindingSource;
         private System.Windows.Forms.BindingSource adbServiceBindingSource1;
         private System.Windows.Forms.BindingSource deviceReportBindingSource;
-        private Button buttonRESETADB;
-        private Button buttonNETWORKING;
-        private Label label3;
-        private TextBox textBoxNEWDEVICE;
         private GroupBox groupBox1;
-        private GroupBox groupBox2;
         private Button buttonUninstall;
         private ProgressBar progressBar;
         private Label labelServerIp;
         private TextBox textBoxServerIp;
-        private Button buttonGenerate;
         private Button buttonDeploy;
+        private FileSystemWatcher fileSystemWatcher1;
+        private Button buttonDisconnect;
+        private Label labelAPKNAME;
+        private Label labelAPK;
+        private Label label1;
+        private NumericUpDown numericUpDownDEVICESDEPLOYMENT;
+        private BindingSource deviceManagerBindingSource;
+        private BindingSource deviceInfoBindingSource;
+        private Button CANCEL;
+        private Label counter;
+        private Button buttonDeployPath;
+        private TextBox deployPath;
+        private Label label3;
+        private Button buttonSTARTEXPERIENCE;
     }
 }
 

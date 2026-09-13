@@ -1,14 +1,15 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Managers;
 using EasyConnect.Models;
 using EasyConnect.Services;
+using System.ComponentModel;
+using System.Drawing.Text;
+using System.Text.RegularExpressions;
 
 namespace EasyConnect
 {
     public partial class WINDOW : Form
     {
-        private bool _inAction = false;
-
-        private readonly NetworkingConfiguration NetConfig;
         private SynchronizationContext? _UiContext;
 
         private readonly AppManager _AppManager;
@@ -19,21 +20,22 @@ namespace EasyConnect
         private readonly WebSocketService _WebSocketService;
         private readonly AdbService _AdbService;
         private readonly NetworkService _NetworkService;
-
         private readonly NetworkConfigurationService _NetworkingConfigurationService;
+        private readonly HttpController _HttpController;
+
+        private readonly DeviceManager _DeviceManager;
 
         public WINDOW(
-            NetworkingConfiguration NetConfig,
             NetworkConfigurationService _NetworkingConfigurationService,
             NetworkService _NetworkService, WebSocketService _WebSocketService,
             AdbService _AdbService, DeployController _DeployController,
             InfoController _InfoController, HttpController _HttpController,
             AppManager _AppManager, DeploymentService _DeploymentService,
-            ConnectionService _ConnectionService
+            ConnectionService _ConnectionService,
+            DeviceManager _DeviceManager
             )
         {
             InitializeComponent();
-            this.NetConfig = NetConfig;
             this._NetworkingConfigurationService = _NetworkingConfigurationService;
             this._DeploymentService = _DeploymentService;
             this._ConnectionService = _ConnectionService;
@@ -42,57 +44,63 @@ namespace EasyConnect
             this._AdbService = _AdbService;
             this._DeployController = _DeployController;
             this._AppManager = _AppManager;
+            this._DeviceManager = _DeviceManager;
+            this._HttpController = _HttpController;
 
-            listBoxLogs.DrawMode = DrawMode.OwnerDrawFixed;
-            listBoxLogs.ItemHeight = 20;
-            listBoxLogs.DrawItem += listBoxLogs_DrawItem!;
+            _AppManager.PropertyChanged += InputUserHandler!;
+            _DeviceManager.FromMessageinfo += ConnectionFromMessageInfo!;
         }
-        private void listBoxLogs_DrawItem(object sender, DrawItemEventArgs e)
+
+        private async void InputUserHandler(object sender, PropertyChangedEventArgs e)
         {
-            if (e.Index < 0) return;
-
-            e.DrawBackground();
-
-            if (listBoxLogs.Items[e.Index] is ProgressStatus status)
+            if (e.PropertyName == nameof(_AppManager.InAction))
             {
-                // Selección
-                Color bgColor = (e.State & DrawItemState.Selected) != 0
-                    ? SystemColors.Highlight
-                    : listBoxLogs.BackColor;
-
-                Color fgColor = status.IsCompleted
-                    ? Color.DarkGreen
-                    : status.Percent < 100
-                        ? Color.Black
-                        : Color.Black;
-
-                using (var bgBrush = new SolidBrush(bgColor))
-                    e.Graphics.FillRectangle(bgBrush, e.Bounds);
-
-                using var fgBrush = new SolidBrush(fgColor);
-                Font font = status.IsCompleted
-                    ? new Font(e.Font!, FontStyle.Regular)
-                    : e.Font!;
-                e.Graphics.DrawString(status.ToString(), font, fgBrush, e.Bounds.X + 2, e.Bounds.Y);
+                SettButtonHandler(!_AppManager.InAction);
             }
-
-            e.DrawFocusRectangle();
+        }
+        private void SettButtonHandler(bool enabled)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => SettButtonHandler(enabled));
+                return;
+            }
+            SettButtonEnabled(this.Controls, enabled);
+        }
+        private void SettButtonEnabled(Control.ControlCollection controllers, bool enabled)
+        {
+            foreach (Control control in controllers)
+            {
+                if (control.Name == "groupBoxSERVER" || control.Name == "CANCEL"
+                    || control.Name == "dataGridView1"
+                    || control.Name == "groupBoxSERVER"
+                    || control.Name == "groupBoxDEVICES"
+                    || control.Name == "listBoxLogs")
+                    continue;
+                control.Enabled = enabled;
+                if (control.HasChildren)
+                    SettButtonEnabled(control.Controls, enabled);
+            }
         }
         private async void Form1_Load(object sender, EventArgs e)
         {
             _UiContext = SynchronizationContext.Current;
             if (_UiContext != null)
             {
-                await _AppManager.StartEventSubscribeAsync(_UiContext);
+                _AppManager.ListBoxLogs = listBoxLogs;
+                await _DeviceManager.StartDeviceManager(_UiContext);
+                listBoxLogs.DrawItem += _AppManager.ListBoxLogs_DrawItem!;
 
-                labelBUNDLE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.bundle), false, DataSourceUpdateMode.OnPropertyChanged);
+                labelBUNDLE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
                 labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.MyIPAddressesString), false, DataSourceUpdateMode.OnPropertyChanged);
-                dataGridView1.AllowUserToAddRows = false;
-                dataGridView1.AllowUserToDeleteRows = false;
-                dataGridView1.ReadOnly = false;
-                dataGridView1.DataSource = _AdbService.DevicesBindingList;
+                labelAPK.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ApkName), false, DataSourceUpdateMode.OnPropertyChanged);
+
+                dataGridView1.DataSource = _DeviceManager.DevicesBindingList;
+                _ = _HttpController.sendUdpPacket();
             }
         }
+
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (!_AppManager.IsClosing)
@@ -118,7 +126,6 @@ namespace EasyConnect
             }
             finally
             {
-                NetConfig.Close();
                 Invoke(() => Close());
             }
         }
@@ -132,352 +139,24 @@ namespace EasyConnect
         }
         private async void buttonCONNECT_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (!_inAction)
-                {
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    _inAction = true;
-                    await _DeployController.StartManualHeadsetConnection(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-        }
-        private void listBoxFILENAMES_SelectedIndexChanged(object sender, EventArgs e)
-        {
-        }
-        private async void buttonDOWNLOAD_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    _inAction = true;
-                    await _DeployController.StartDownload(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-        private async void buttonMOVE_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    var bundle = _NetworkService.bundle;
-                    await _DeploymentService.AdbMove(progress, bundle);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-        private async void buttonINSTALL_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    await _DeployController.StartInstaller(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-
-        private void textBoxNEWDEVICE_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void labelIPDEVICE_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void labelBUNDLE_Click(object sender, EventArgs e)
-        {
-
+            //await ActionAsync<Stages>(actionAsync: _DeployController.StartManualHeadsetConnection);
         }
 
         private async void buttonAUTOSCANN_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    await _DeployController.StartAutoHeadsetConnection(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-
-        private async void buttonWEBSOCKETCONNECTION_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    await _WebSocketService.StopWebSocketConnectionAsync(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-
-        }
-
-        private async void buttonRESETADB_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    await _AdbService.ResetAdb();
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
-        }
-
-        private async void buttonNETWORKING_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    await NetConfig.ShowDialogAsync();
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
-
+            //await ActionAsync<Stages>(actionAsync: _DeployController.StartAutoHeadsetConnection);
+            CounterDevices();
         }
 
         private async void buttonUninstall_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    await _DeployController.StartUninstaller(progress);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
+            int maxDevices = (int)numericUpDownDEVICESDEPLOYMENT.Value;
+            //await ActionAsync<DeploymentState, int>(actionAsync: _DeployController.StartUninstall, maxDevices);
         }
 
         private async void buttonGenerate_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    await _NetworkingConfigurationService.GenerateNetworkingConfigurationJson();
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _inAction = false;
-            }
+            await ActionAsync<Stages>(actionAsync: _NetworkingConfigurationService.GenerateNetworkingConfigurationJson);
         }
 
         private void textBoxServerIp_TextChanged(object sender, EventArgs e)
@@ -487,29 +166,67 @@ namespace EasyConnect
 
         private async void buttonDeploy_Click(object sender, EventArgs e)
         {
+            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
+            await ActionAsync<Stages, int>(actionAsync: _DeployController.StartDeployment, value: maxDevices);
+        }
+
+        private async void buttonDisconnect_Click(object sender, EventArgs e)
+        {
+            await ActionAsync<Stages>(actionAsync: _DeployController.StartHeadsetDisconnection);
+            CounterDevices();
+        }
+
+        private async void CANCEL_Click(object sender, EventArgs e)
+        {
+            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
+            await _DeployController.StopDeployment(maxDevices);
+            _AppManager.InAction = false;
+        }
+        private async void ConnectionFromMessageInfo(object sender, RegisterInformation e)
+        {
+            //await ActionAsync<Stages, RegisterInformation>(actionAsync: _DeployController.StartMessageInfoHeadsetConnection, e);
+            CounterDevices();
+        }
+        private void CounterDevices()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => CounterDevices);
+                return;
+            }
+            counter.Text = _DeviceManager.DevicesDictionary.Count.ToString();
+        }
+        private void buttonDeployPath_Click(object sender, EventArgs e)
+        {
+            var pattern = new Regex(@"(?:^|\\)([^\\]+)\\?$");
+            var match = pattern.Match("");
+            _AppManager.FolderBrowser(selectedPath =>
+            {
+                deployPath.Text = selectedPath;
+                match = pattern.Match(selectedPath!);
+                if (match.Success)
+                    _NetworkService.FolderBundle = match.Groups[1].Value;
+                _NetworkService.DeployPath = selectedPath!;
+
+                _ = _NetworkService.GenerateManifest();
+            });
+        }
+
+        private async void buttonSTARTEXPERIENCE_Click(object sender, EventArgs e)
+        {
+            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
+            await _DeployController.StartExperience(maxDevices);
+        }
+
+        private async Task ActionAsync<T>(Func<IProgress<ProgressStatus<T>>, Task> actionAsync)
+        {
+            if (_AppManager.InAction)
+                throw new InvalidOperationException("Another action is already running");
             try
             {
-                if (!_inAction)
-                {
-                    _inAction = true;
-                    var progress = new Progress<ProgressStatus>(p =>
-                    {
-                        if (p.Percent >= 0)
-                        {
-                            progressBar.Value = Math.Max(
-                                progressBar.Minimum,
-                                Math.Min(progressBar.Maximum, p.Percent)
-                            );
-                        }
-
-                        if (p.Stage != null)
-                        {
-                            listBoxLogs.Items.Add(p);
-                            listBoxLogs.TopIndex = listBoxLogs.Items.Count - 1;
-                        }
-                    });
-                    await _DeployController.StartDeployment(progress);
-                }
+                _AppManager.InAction = true;
+                var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+                await actionAsync(progress);
             }
             catch (Exception)
             {
@@ -518,7 +235,63 @@ namespace EasyConnect
             }
             finally
             {
-                _inAction = false;
+                _AppManager.InAction = false;
+            }
+        }
+        private async Task Event<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
+        {
+            var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+            await actionAsync(progress, value);
+        }
+        private async Task ActionAsync<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
+        {
+            if (_AppManager.InAction)
+                throw new InvalidOperationException("Another action is already running");
+            try
+            {
+                _AppManager.InAction = true;
+                await Event<T, S>(actionAsync, value);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                _AppManager.InAction = false;
+            }
+        }
+        private async Task<T> FunctionAsync<T>(Func<IProgress<ProgressStatus<T>>, Task<T>>? actionAsync = null, Func<Task<T>>? functionAsync = null)
+        {
+            if (InvokeRequired)
+            {
+                return await Invoke(
+                            new Func<Task<T>>(
+                                () => FunctionAsync(actionAsync, functionAsync)
+                            )
+                        );
+            }
+            if (_AppManager.InAction)
+                throw new InvalidOperationException("Another action is already running");
+            if (functionAsync == null && actionAsync == null)
+                throw new InvalidOperationException("No parameters");
+            try
+            {
+                _AppManager.InAction = true;
+                var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+                if (actionAsync != null)
+                    return await actionAsync(progress);
+                return await functionAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                _AppManager.InAction = false;
             }
         }
     }

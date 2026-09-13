@@ -1,21 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 
 namespace EasyConnect.Models
 {
-    public class DeviceInfo(string id) : INotifyPropertyChanged
+    public class DeviceInfo : INotifyPropertyChanged
     {
-        private string? _ip = id;
+        public DeviceInfo(string id)
+        {
+            SerialNumber = id;
+        }
+        private string? _ip;
         public string? Ip
         {
             get => _ip;
             set
             {
-                if (_ip != value)
+                if (_ip != value && value != null)
                 {
                     _ip = value;
                     OnPropertyChanged(nameof(Ip));
@@ -28,7 +27,7 @@ namespace EasyConnect.Models
             get => _serialNumber;
             set
             {
-                if (_serialNumber != value)
+                if (_serialNumber != value && value != null)
                 {
                     _serialNumber = value;
                     OnPropertyChanged(nameof(SerialNumber));
@@ -41,36 +40,36 @@ namespace EasyConnect.Models
             get => deviceId;
             set
             {
-                if (deviceId != value)
+                if (deviceId != value && value != null)
                 {
                     deviceId = value;
                     OnPropertyChanged(nameof(DeviceId));
                 }
             }
         }
-        private string? _status;
-        public string? Status
+        private DeviceStatus? _status;
+        public DeviceStatus? Status
         {
             get => _status;
             set
             {
-                if (_status != value)
+                if (_status != value && value != null)
                 {
                     _status = value;
                     OnPropertyChanged(nameof(Status));
                 }
             }
         }
-        private long? _percent;
-        public long? Percent
+        private JobState? _jobStatus = JobState.Waiting;
+        public JobState? JobStatus
         {
-            get => _percent;
+            get => _jobStatus;
             set
             {
-                if (value != _percent)
+                if (_jobStatus != value && value != null)
                 {
-                    _percent = value;
-                    OnPropertyChanged(nameof(Percent));
+                    _jobStatus = value;
+                    OnPropertyChanged(nameof(JobStatus));
                 }
             }
         }
@@ -80,7 +79,7 @@ namespace EasyConnect.Models
             get => _battery;
             set
             {
-                if (_battery != value)
+                if (_battery != value && value != null)
                 {
                     _battery = value;
                     OnPropertyChanged(nameof(Battery));
@@ -92,18 +91,14 @@ namespace EasyConnect.Models
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        public void UpdateFromDeviceReport(DeviceReport deviceReport)
+        public void UpdateFromReport(DeviceReport report)
         {
-            if (deviceReport == null)
-                return;
-
-            Ip = deviceReport.Ip;
-            SerialNumber = deviceReport.SerialNumber;
-            DeviceId = deviceReport.DeviceId;
-            Status = deviceReport.Status;
-            Percent = deviceReport.Percent;
-
-            Battery = deviceReport.Battery;
+            Ip = report.Ip;
+            SerialNumber = report.SerialNumber;
+            DeviceId = report.DeviceId?.ToString();
+            Status = report.Status;
+            JobStatus = report.JobStatus;
+            Battery = report.Battery;
         }
     }
 }

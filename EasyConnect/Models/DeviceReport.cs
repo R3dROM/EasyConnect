@@ -1,19 +1,12 @@
-﻿using System.Collections.Concurrent;
-using System.ComponentModel;
-
-namespace EasyConnect.Models
+﻿namespace EasyConnect.Models
 {
-    public class DeviceReport : INotifyPropertyChanged
+    public class DeviceReport
     {
-        private readonly ConcurrentDictionary<string, DeviceJobSession> _sessions = new();
-        public DeviceReport(string ip, string? serialNumber = null)
+        public DeviceReport(string? serialNumber = null)
         {
             if (serialNumber != null)
                 SerialNumber = serialNumber;
-            Ip = ip;
         }
-
-        // ID inmutable
         private string _ip = "";
         public string Ip
         {
@@ -23,7 +16,6 @@ namespace EasyConnect.Models
                 if (_ip != value && value != null)
                 {
                     _ip = value;
-                    OnPropertyChanged(nameof(Ip));
                 }
             }
         }
@@ -36,20 +28,20 @@ namespace EasyConnect.Models
                 if (_serialNumber != value && value != null)
                 {
                     _serialNumber = value;
-                    OnPropertyChanged(nameof(SerialNumber));
                 }
             }
         }
-        private string? _deviceId = string.Empty;
-        public string? DeviceId
+
+        public const int InvalidId = -1;
+        private int? _deviceId = InvalidId;
+        public int? DeviceId
         {
             get => _deviceId;
             set
             {
-                if (_deviceId != value && value != null)
+                if (_deviceId != value && value != InvalidId)
                 {
                     _deviceId = value;
-                    OnPropertyChanged(nameof(DeviceId));
                 }
             }
         }
@@ -62,25 +54,11 @@ namespace EasyConnect.Models
                 if (_battery != value && value != null)
                 {
                     _battery = value;
-                    OnPropertyChanged(nameof(Battery));
                 }
             }
         }
-        private string? _bundle;
-        public string? Bundle
-        {
-            get => _bundle;
-            set
-            {
-                if (_bundle != value && value != null)
-                {
-                    _bundle = value;
-                    OnPropertyChanged(nameof(Bundle));
-                }
-            }
-        }
-        private string? _status = "Connected";
-        public string? Status
+        private DeviceStatus? _status = DeviceStatus.Boot;
+        public DeviceStatus? Status
         {
             get => _status;
             set
@@ -88,7 +66,18 @@ namespace EasyConnect.Models
                 if (_status != value && value != null)
                 {
                     _status = value;
-                    OnPropertyChanged(nameof(Status));
+                }
+            }
+        }
+        private JobState? _jobStatus = JobState.Waiting;
+        public JobState? JobStatus
+        {
+            get => _jobStatus;
+            set
+            {
+                if (_jobStatus != value && value != null)
+                {
+                    _jobStatus = value;
                 }
             }
         }
@@ -101,7 +90,6 @@ namespace EasyConnect.Models
                 if (_currentFile != value && value != null)
                 {
                     _currentFile = value;
-                    OnPropertyChanged(nameof(CurrentFile));
                 }
             }
         }
@@ -114,33 +102,6 @@ namespace EasyConnect.Models
                 if (_percent != value && value != null)
                 {
                     _percent = value;
-                    OnPropertyChanged(nameof(Percent));
-                }
-            }
-        }
-        private string? _apkName;
-        public string? ApkName
-        {
-            get => _apkName;
-            set
-            {
-                if (_apkName != value && value != null)
-                {
-                    _apkName = value;
-                    OnPropertyChanged(nameof(ApkName));
-                }
-            }
-        }
-        private long? _apkSize;
-        public long? ApkSize
-        {
-            get => _apkSize;
-            set
-            {
-                if (_apkSize != value && value != null)
-                {
-                    _apkSize = value;
-                    OnPropertyChanged(nameof(ApkSize));
                 }
             }
         }
@@ -153,46 +114,82 @@ namespace EasyConnect.Models
                 if (_timestamp != value && value != null)
                 {
                     _timestamp = value;
-                    OnPropertyChanged(nameof(Timestamp));
                 }
             }
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string propertyName) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        // Actualizar desde un payload externo
-        public void UpdateFromPayload(MessageInfo other)
+        private int? _lastSeen = 0;
+        public int? LastSeen
         {
-            if (other?.payload == null) return;
-
-            Ip = other.payload.ip;
-            SerialNumber = other.payload.serialNumber;
-            Bundle = other.payload.bundle;
-            Status = other.payload.status;
-            CurrentFile = other.payload.currentFile;
-            Percent = other.payload.percent;
-            ApkName = other.payload.apkName;
-            ApkSize = other.payload.apkSize;
-            Timestamp = other.payload.timestamp;
-            Battery = other.payload.batteryLvl;
+            get => _lastSeen;
+            set
+            {
+                if (value != null && _lastSeen != value)
+                {
+                    _lastSeen = value;
+                }
+            }
         }
-        public void UpdateFromPc(DeviceReport other)
+        CancellationTokenSource _timerCts = new CancellationTokenSource();
+
+        public void UpdateDeploy(DeploymentInformation info)
         {
-            if (other == null) return;
-
-            Ip = other.Ip;
-            SerialNumber = other.SerialNumber;
-            DeviceId = other.DeviceId;
-            Bundle = other.Bundle;
-            Status = other.Status;
-            CurrentFile = other.CurrentFile;
-            Percent = other.Percent;
-            ApkName = other.ApkName;
-            ApkSize = other.ApkSize;
-            Timestamp = other.Timestamp;
+            JobStatus = info.Status;
+            CurrentFile = info.CurrentFile;
+            Percent = info.Percent;
+            Timestamp = info.Timestamp;
         }
-        public NetworkConfiguration DeviceReportToNetworkConfig() => new(Ip, SerialNumber??string.Empty);
+        public void UpdateJobStatus(Acknowledgeinformation info)
+        {
+            JobStatus = info.Status;
+        }
+        public void UpdateBatteryLvl(BatteryInformation info)
+        {
+            Battery = info.BatteryLvl;
+        }
+        public void UpdateHeartbeat(HeartbeatInformation info)
+        {
+            RestartLastSeenTimer();
+        }
+        public void UpdateRegister(RegisterInformation info)
+        {
+            Ip = info.Ip;
+            DeviceId = int.TryParse(info.DeviceNumber, out var deviceid) ? deviceid : InvalidId;
+            SerialNumber = info.SerialNumber;
+            Status = info.Status;
+        }
+        private void RestartLastSeenTimer()
+        {
+            _timerCts.Cancel();
+            _timerCts.Dispose();
+
+            _timerCts = new CancellationTokenSource();
+
+            _lastSeen = 0;
+
+            _ = UpdateTimerAsync(_timerCts.Token);
+        }
+
+        private async Task UpdateTimerAsync(CancellationToken token)
+        {
+            try
+            {
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    LastSeen = _lastSeen;
+                    _lastSeen++;
+
+                    await Task.Delay(1000, token);
+
+                    if (_lastSeen >= 60)
+                        Status = DeviceStatus.Offline;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Timer reemplazado por uno nuevo
+            }
+        }
     }
 }

@@ -1,21 +1,21 @@
 ﻿using EasyConnect.Models;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace EasyConnect.Services
 {
     public class NetworkService(ConsoleService _consoleService ) : INotifyPropertyChanged
     {
         private readonly ConsoleService _consoleService = _consoleService;
+        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private Manifest? _manifest = null;
@@ -55,29 +55,7 @@ namespace EasyConnect.Services
             }
         }
         private string _caddyExe = string.Empty;
-        public string CaddyExe
-        {
-            get => _caddyExe;
-            set
-            {
-                if (_caddyExe != value)
-                {
-                    _caddyExe = value;
-                }
-            }
-        }
         private string _caddyFile = string.Empty;
-        public string CaddyFile
-        {
-            get => _caddyFile;
-            set
-            {
-                if (_caddyFile != value)
-                {
-                    _caddyFile = value;
-                }
-            }
-        }
         private string _caddyPath = string.Empty;
         public string CaddyPath
         {
@@ -88,22 +66,11 @@ namespace EasyConnect.Services
                 {
                     _caddyPath = value;
                     _caddyExe = Path.Combine(_caddyPath, "caddy.exe");
-                    _caddyFile = Path.Combine(_caddyPath, "Caddyfile");
+                    _caddyFile = Path.Combine(_caddyPath, "CaddyFile");
                 }
             }
         }
-        private string _deviceListPath = string.Empty;
-        public string DeviceListPath
-        {
-            get => _deviceListPath;
-            set
-            {
-                if (value != _deviceListPath)
-                {
-                    _deviceListPath= value;
-                }
-            }
-        }
+
         private IPAddress[] _myIpAddress = [];
         public IPAddress[] myIpAddress
         {
@@ -116,38 +83,78 @@ namespace EasyConnect.Services
                 OnPropertyChanged(nameof(MyIPAddressesString));
             }
         }
-        public string MyIPAddressesString => myIpAddress.FirstOrDefault() == null ? "" : myIpAddress.FirstOrDefault()!.ToString();
+
+        public string MyIPAddressesString =>
+            myIpAddress.First(ip => Regex.IsMatch(ip.ToString(), @"^192\.168\.\d{1,3}\.\d{1,3}$")).ToString() ?? string.Empty;
 
         private string _serverIp = "";
-        public string serverIp{
+        public string ServerIp{
             get => _serverIp;
             set 
             {
                 if (_serverIp != value)
                     _serverIp = value;
-                OnPropertyChanged(nameof(serverIp));
+                OnPropertyChanged(nameof(ServerIp));
             }
         }
         private string _serverPort = "8000";
-        public string serverPort
+        public string ServerPort
         {
             get => _serverPort;
             set
             {
                 if (_serverPort != value)
                     _serverPort = value;
-                OnPropertyChanged(nameof(serverPort));
+                OnPropertyChanged(nameof(ServerPort));
+            }
+        }
+        private string _webSocketPort = "8181";
+        public string WebSocketPort
+        {
+            get => _webSocketPort;
+            set
+            {
+                if (_webSocketPort != value)
+                    _webSocketPort = value;
+                OnPropertyChanged(nameof(WebSocketPort));
+            }
+        }
+        private string _folderBundle = "";
+        public string FolderBundle
+        {
+            get => _folderBundle;
+            set
+            {
+                if (value != _folderBundle)
+                    _folderBundle = value;
+                OnPropertyChanged(nameof(FolderBundle));
             }
         }
         private string _bundle = "";
-        public string bundle
+        public string Bundle
         {
             get => _bundle;
             set
             {
                 if (value != _bundle)
                     _bundle = value;
-                OnPropertyChanged(nameof(bundle));
+                OnPropertyChanged(nameof(Bundle));
+            }
+        }
+        private string _apkName = string.Empty;
+        public string ApkName
+        {
+            get => _apkName;
+            set
+            {
+                if (value != _apkName)
+                {
+                    var tmp = value;
+                    tmp = tmp.Substring(4);
+                    _apkName = tmp;
+
+                }
+                OnPropertyChanged(nameof(ApkName));
             }
         }
         protected void OnPropertyChanged(string name)
@@ -158,12 +165,14 @@ namespace EasyConnect.Services
         {
             await _consoleService.RunCommandAsync(_caddyExe, $"stop");
         }
-        public async Task PUTConfigLocal(string json, string path)
+        public async Task PUTConfigLocal(string json, string path, string file)
         {
             using HttpClient client = new();
             try
             {
-                string url = Path.Combine(DeployPath, path);
+                string folder = Path.Combine(DeployPath, path);
+                Directory.CreateDirectory(folder);
+                string url = Path.Combine(folder, file);
                 await File.WriteAllTextAsync(url, json);
             }
             catch (Exception ex)
@@ -176,11 +185,11 @@ namespace EasyConnect.Services
         {
             try
             {
-                string url = Path.Combine(DeployPath, "manifest.json");
-                var json = await File.ReadAllTextAsync(url);
+                var manifest = Path.Combine(DeployPath, "manifest.json");
+                var json = await File.ReadAllTextAsync(manifest);
                 if (json == null)
                     return null;
-                var files = JsonSerializer.Deserialize<Manifest>(json);
+                var files = JsonSerializer.Deserialize<Manifest>(json, _jsonSerializerOptions);
                 return files;
             }
             catch (Exception ex)
@@ -189,38 +198,46 @@ namespace EasyConnect.Services
                 return null;
             }
         }
-        public async Task GenerateManifest()
+        public async Task<DeviceCommandResult> GenerateManifest()
         {
-            var manifestScriptPath = Path.Combine(ManifestScriptsPath, "generate-manifest.ps1");
-            var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{manifestScriptPath}\" \"{DeployPath}\"");
+            try
+            {
+                if (string.IsNullOrEmpty(DeployPath) || string.IsNullOrEmpty(ManifestScriptsPath))
+                    return new DeviceCommandResult
+                    {
+                        Ip = "127.0.0.1",
+                        ExitCode = -1,
+                        Output = "Manifest or Deploy path empty or NULL",
+                    };
 
-            Manifest = await GetManifestFromLocal();
-            if (Manifest != null)
-            {
-                bundle = Manifest.bundle;
-            }
-            Debug.WriteLine(result.Output);
-        }
-        public async Task<string> GetDeviceIdFromManifest(string serialNumber)
-        {
-            if (Manifest == null)
-                return "";
-            foreach (var item in Manifest.netConfigs)
-            {
-                if (item.serialNumber == serialNumber)
-                    return item.deviceId;
-            }
-            return "";
-        }
-        public async Task GetDeviceIdFromDeviceListPath()
-        {
-            if (!string.IsNullOrEmpty(_deviceListPath))
-            {
-                var deviceListString = await File.ReadAllTextAsync(_deviceListPath);
-                if (deviceListString != null)
+                var result = await _consoleService.RunCommandAsync("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{ManifestScriptsPath}\" \"{DeployPath}\"");
+
+                if (result.ExitCode != 0)
                 {
-                    await RootJsonService.LoadJsonFile(deviceListString);
+                    return new DeviceCommandResult
+                    {
+                        Ip = "127.0.0.1",
+                        ExitCode = -1,
+                        Output = result.Output,
+                    };
                 }
+                Manifest = await GetManifestFromLocal();
+                if (Manifest != null)
+                {
+                    Bundle = Manifest.Bundle;
+                    ApkName = Manifest.Files.First(d => d.Path.EndsWith(".apk")).Path;
+                }
+                return new DeviceCommandResult
+                {
+                    Ip = "127.0.0.1",
+                    ExitCode = result.ExitCode,
+                    Output = result.Output,
+                };
+            }
+            catch (Exception)
+            {
+
+                throw;
             }
         }
         public async Task<DeviceCommandResult> StartServerNetwork()
@@ -230,10 +247,18 @@ namespace EasyConnect.Services
                 await Task.Run(async () =>
                 {
                     _myIpAddress = GetMyIpAddress();
+                    foreach (var item in _myIpAddress)
+                    {
+                        Debug.WriteLine(item.ToString());
+                    }
                     _serverIp = MyIPAddressesString;
-                    await GenerateManifest();
-                    await GetDeviceIdFromDeviceListPath();
-                    _ = _consoleService.RunCommandAsync(_caddyExe, $"start --config {_caddyFile}");
+
+                    //var manifestResult = await GenerateManifest();
+                    //if (manifestResult.ExitCode != 0)
+                    //{
+                    //    throw new Exception();
+                    //}
+                    _ =  _consoleService.RunCommandAsync(_caddyExe, $"run --config {_caddyFile}");
                 });
                 return new DeviceCommandResult
                 {
@@ -250,7 +275,6 @@ namespace EasyConnect.Services
                     ExitCode = -1,
                     Output = "Network Service Fail"
                 };
-                throw;
             }
         }
         public async Task<IPAddress[]?> StartAutoConnectionAsync()
@@ -279,8 +303,7 @@ namespace EasyConnect.Services
                 {
                     try
                     {
-                        if (await PingAsync(ip.ToString()) &&
-                            await VerifyPortAsync(ip.ToString(), 5555))
+                        if (await VerifyPortAsync(ip.ToString(), 5555))
                         {
                             return ip;
                         }
@@ -303,7 +326,7 @@ namespace EasyConnect.Services
             try
             {
                 using var ping = new Ping();
-                var reply = await ping.SendPingAsync(ip, 5000);
+                var reply = await ping.SendPingAsync(ip, 15000);
                 return reply.Status == IPStatus.Success;
             }
             catch (Exception ex)
@@ -314,11 +337,11 @@ namespace EasyConnect.Services
         }
         public async Task<bool> VerifyPortAsync(string ip, int port)
         {
+            using var client = new TcpClient();
             try
             {
-                using var client = new TcpClient();
                 var connectTask = client.ConnectAsync(ip, port);
-                var completedTask = await Task.WhenAny(connectTask, Task.Delay(2000));
+                var completedTask = await Task.WhenAny(connectTask, Task.Delay(1000));
                 return completedTask == connectTask && client.Connected;
             }
             catch (Exception ex)
@@ -331,7 +354,7 @@ namespace EasyConnect.Services
         {
             try
             {
-                var currentIPs =  Dns.GetHostAddresses(Dns.GetHostName());
+                var currentIPs = Dns.GetHostAddresses(Dns.GetHostName());
                 return [.. currentIPs.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)];
             }
             catch (Exception ex)
@@ -389,5 +412,55 @@ namespace EasyConnect.Services
             var bytes = BitConverter.GetBytes(ip).Reverse().ToArray();
             return new IPAddress(bytes);
         }
+        //public async Task<string[]?> NetworkScannerAsync()
+        //{
+        //    var results = new Dictionary<string, IZeroconfHost>();
+        //    for (int i = 0; i < 2; i++)
+        //    {
+        //        var hosts = await ZeroconfResolver.ResolveAsync("_adb._tcp.local.", TimeSpan.FromSeconds(30), 5);
+
+        //        foreach (var host in hosts)
+        //            results[host.IPAddress] = host;
+
+        //        await Task.Delay(50);
+        //    }
+        //    var listOfIp = results.Select(r => r.Key).ToList();
+        //    return [.. listOfIp];
+        //}
+        //public UnicastIPAddressInformation[] GetMyIpAddress()
+        //{
+        //    try
+        //    {
+        //        _networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+        //                    .FirstOrDefault(nic =>
+        //                        nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 &&
+        //                        nic.OperationalStatus == OperationalStatus.Up)
+        //                    ??
+        //                    NetworkInterface.GetAllNetworkInterfaces()
+        //                    .Where(nic =>
+        //                        nic.OperationalStatus == OperationalStatus.Up &&
+        //                        !nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) &&
+        //                        !nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase))
+        //                    .FirstOrDefault(nic =>
+        //                        (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+        //                         nic.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet) &&
+        //                        nic.OperationalStatus == OperationalStatus.Up)!;
+        //        if (_networkInterfaces == null)
+        //            return [];
+
+        //        return
+        //        [
+        //            .. _networkInterfaces
+        //        .GetIPProperties()
+        //        .UnicastAddresses
+        //        .Where(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork)
+        //        ];
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine(ex);
+        //        throw;
+        //    }
+        //}
     }
 }
