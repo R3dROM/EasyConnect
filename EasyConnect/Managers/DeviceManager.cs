@@ -101,51 +101,51 @@ namespace EasyConnect.Managers
         public SortableBindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
         private SynchronizationContext? _syncContext = null;
 
-        public event EventHandler<RegisterInformation> FromMessageinfo;
-
         public Task StartDeviceManager(SynchronizationContext uiContext)
         {
             _syncContext = uiContext;
             return Task.CompletedTask;
         }
-        public void UpdateDevice<T>(T payload, string id, Action<T, DeviceReport> action)
+        public void UpdateDevice(IReport payload, string id, Action<IReport, DeviceReport> action)
         {
-            if (!GetReport(id, out var existing) || existing == null)
-                return;
-
-            action(payload, existing);
-
-            var deviceInfo = GetDeviceInfo(id);
-            _syncContext?.Send(_ =>
+            try
             {
-                deviceInfo?.UpdateFromReport(existing);
-            }, null);
+                if (!GetReport(id, out var existing) || existing == null)
+                    throw new Exception($"Report of {id} not found");
+
+                action(payload, existing);
+
+                var deviceInfo = GetDeviceInfo(id);
+                _syncContext?.Send(_ =>
+                {
+                    if (deviceInfo == null)
+                    {
+                        var newDevice = new DeviceInfo(id);
+                        _devicesBindingList.Add(newDevice);
+                    }
+                    deviceInfo?.UpdateFromReport(existing);
+                }, null);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
-        public bool AddDevice(RegisterInformation register)
+        public bool AddDevice(IReport register)
         {
-            var id = register.SerialNumber;
+            var id = register.Id;
             if (id == null) 
                 return false;
             var device = new DeviceReport(id);
             var isNew = _devicesDictionary.TryAdd(id, device);
             if (isNew)
             {
-                var deviceInfo = new DeviceInfo(id);
-                _syncContext?.Send(_ => {
-                    _devicesBindingList.Add(deviceInfo);
-                }, null);
                 UpdateDevice(
                     register,
                     id,
                     (data, device) => device.UpdateRegister(data));
             }
             return isNew;
-        }
-        public void AddDeviceFromMessageInfo(string id, RegisterInformation messageInfo)
-        {
-            var isNew = _devicesDictionary.ContainsKey(id);
-            if (!isNew)
-                FromMessageinfo?.Invoke(this, messageInfo);
         }
         public bool RemoveDevice(string id)
         {

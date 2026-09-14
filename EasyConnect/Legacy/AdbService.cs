@@ -1,10 +1,11 @@
 ﻿using EasyConnect.Managers;
 using EasyConnect.Models;
+using EasyConnect.Services;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-namespace EasyConnect.Services
+namespace EasyConnect.Legacy
 {
     public class AdbService
     {
@@ -78,48 +79,6 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-        //public async Task<DeviceCommandResult> ConnectDevice(string id, DeviceReport? device = null)
-        //{
-        //    try
-        //    {
-        //        device ??= new DeviceReport(id);
-        //        if (!_deviceManager.AddDevice(device))
-        //            return new DeviceCommandResult
-        //            {
-        //                ExitCode = -1,
-        //                Ip = "",
-        //                Output = "Dispositivo ya conectado"
-        //            };
-        //        //var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"{arguments}");
-        //        //if (ExitCode != 0)
-        //        //{
-        //        //    _deviceManager.RemoveDevice(device.Ip);
-        //        //    throw new Exception("Error al conectar el dispositivo");
-        //        //}
-        //        //if (!ParseAdbConnectResult(Output))
-        //        //{
-        //        //    Debug.WriteLine(_deviceManager.RemoveDevice(device.Ip));
-        //        //    throw new Exception($"Conexión fallida {Output}");
-        //        //}
-        //        return new DeviceCommandResult
-        //        {
-        //            ExitCode = 0,
-        //            Ip = device.Ip,
-        //            Output = "Connected"
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        if (device != null && _deviceManager.GetReport(device.Ip, out var deviceToDisconnect))
-        //            Debug.WriteLine(_deviceManager.RemoveDevice(deviceToDisconnect!.Ip));
-        //        return new DeviceCommandResult
-        //        {
-        //            ExitCode = -1,
-        //            Ip = "",
-        //            Output = ex.Message
-        //        };
-        //    }
-        //}
         public async Task<DeviceCommandResult> SerialNumberDevice(string ip)
         {
             try
@@ -194,66 +153,8 @@ namespace EasyConnect.Services
                 };
             }
         }
-        public async Task AdbWebSocketConnection(string serverIp, long jobId, string? deviceIp = null)
-        {
-            if (deviceIp != null)
-            {
-                var result = _deviceManager.GetReport(deviceIp, out var device);
-                if (result && device != null)
-                {
-                    var argument = $"shell am start-foreground-service " +
-                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
-                        $"--es TARGET_SERVICE START_WEBSOCKET_SERVICE " +
-                        $"--es webSocketUrl ws://{serverIp}:8181 " +
-                        $"--el registerJobId {jobId}";
-                    await ExecuteCommandOnDevice(deviceIp, argument);
-                }
-                return;
-            }
-        }
-        public async Task AdbStopWebSocketConnection(string serverIp, string? deviceIp = null)
-        {
-            if (deviceIp != null)
-            {
-                var result = _deviceManager.GetReport(deviceIp, out var device);
-                if (result && device != null)
-                {
-                    var argument = $"shell am start-foreground-service " +
-                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
-                        $"--es TARGET_SERVICE START_WEBSOCKET_SERVICE " +
-                        $"--ez stopWebSocket true";
-                    await ExecuteCommandOnDevice(deviceIp, argument);
-                }
-                return;
-            }
-        }
-        public async Task<DeviceCommandResult> AdbStartExperience(string bundle, string? deviceIp = null)
-        {
-            if (deviceIp != null)
-            {
-                var result = _deviceManager.GetReport(deviceIp, out var device);
-                if (result && device != null)
-                {
-                    var argument = $"shell am start-foreground-service " +
-                        $"-n com.easyconnect.agent/.service.EasyAgentService " +
-                        $"--es TARGET_SERVICE START_EXPERIENCE " +
-                        $"--es bundle {bundle}";
-                    await ExecuteCommandOnDevice(deviceIp, argument);
-                }
-                return new DeviceCommandResult
-                {
-                    Ip = deviceIp,
-                    ExitCode = 0,
-                    Output = "SUCCESS START ACTIVITY",
-                };
-            }
-            return new DeviceCommandResult
-            {
-                Ip = deviceIp ?? "",
-                ExitCode = -1,
-                Output = "FAIL START ACTIVITY",
-            };
-        }
+        
+        
         private bool ParseAdbConnectResult(string output)
         {
             if (output.Contains("connected to", StringComparison.CurrentCultureIgnoreCase))

@@ -1,15 +1,21 @@
 ﻿using EasyConnect.Models;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 
 namespace EasyConnect.Services
 {
     public class JobTrackerService
     {
-        private long _jobId = 10;
+        private long _jobId = 1;
+        private readonly ConcurrentDictionary<long, (DeviceJobSession, Command)> _sessions = [];
+        public ConcurrentDictionary<long, (DeviceJobSession, Command)>? Sessions
+        {
+            get => _sessions;
+            private set
+            {
+
+            }
+        }
+
         public bool Complete(IReport message)
             => Finish(message, 0);
 
@@ -18,15 +24,14 @@ namespace EasyConnect.Services
 
         public bool Fail(IReport message)
             => Finish(message, 2);
-        private ConcurrentDictionary<long, DeviceJobSession> _sessions = new();
 
-        public long Register(string deviceId)
+        public long Register(string deviceId, Command command)
         {
             long currentJobId = Interlocked.Increment(ref _jobId);
             var session = new DeviceJobSession(
                 currentJobId,
                 deviceId);
-            _sessions.TryAdd( currentJobId, session );
+            _sessions.TryAdd( currentJobId, (session, command) );
             return currentJobId;
         }
         public Task<DeviceJobResult> WaitForCompletion(long jobId)
@@ -34,7 +39,7 @@ namespace EasyConnect.Services
             if (!_sessions.TryGetValue(jobId, out var session))
                 throw new InvalidOperationException($"Job {jobId} not found");
 
-            return session.Completion.Task;
+            return session.Item1.Completion.Task;
         }
         private bool Finish(IReport message, int exitCode)
         {
@@ -54,7 +59,7 @@ namespace EasyConnect.Services
                 DurationMs = message.Timestamp ?? 0L
             };
 
-            return session.Completion.TrySetResult(result);
+            return session.Item1.Completion.TrySetResult(result);
         }
     }
 }

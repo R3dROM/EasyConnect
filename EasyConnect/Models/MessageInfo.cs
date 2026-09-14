@@ -98,7 +98,10 @@ namespace EasyConnect.Models
     {
         public int? DateTime { get; set; }
     }
+    public interface IInformation
+    {
 
+    }
     public interface IReport
     {
         public string Id { get; set; }
@@ -127,10 +130,9 @@ namespace EasyConnect.Models
         public CommandType CommandType { get; set; }
         public JsonObject Extras { get; set; } = [];
         public long Id { get; set; }
-        public Command(CommandType target, long jobId)
+        public Command(CommandType target)
         {
             CommandType = target;
-            Id = jobId;
         }
         public void PutExtra<T>(string key, T value)
         {

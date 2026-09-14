@@ -1,4 +1,5 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Legacy;
 using EasyConnect.Managers;
 using EasyConnect.Models;
 using EasyConnect.Services;
@@ -48,7 +49,6 @@ namespace EasyConnect
             this._HttpController = _HttpController;
 
             _AppManager.PropertyChanged += InputUserHandler!;
-            _DeviceManager.FromMessageinfo += ConnectionFromMessageInfo!;
         }
 
         private async void InputUserHandler(object sender, PropertyChangedEventArgs e)
@@ -92,8 +92,8 @@ namespace EasyConnect
                 listBoxLogs.DrawItem += _AppManager.ListBoxLogs_DrawItem!;
 
                 labelBUNDLE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
-                labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.MyIPAddressesString), false, DataSourceUpdateMode.OnPropertyChanged);
-                labelAPK.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ApkName), false, DataSourceUpdateMode.OnPropertyChanged);
+                labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ServerIp), false, DataSourceUpdateMode.OnPropertyChanged);
+                //labelAPK.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ApkName), false, DataSourceUpdateMode.OnPropertyChanged);
 
                 dataGridView1.DataSource = _DeviceManager.DevicesBindingList;
                 _ = _HttpController.sendUdpPacket();
@@ -129,18 +129,6 @@ namespace EasyConnect
                 Invoke(() => Close());
             }
         }
-        private void textBoxIP_TextChanged(object sender, EventArgs e)
-        {
-            _ConnectionService.HeadsetIp = textBoxIP.Text;
-        }
-        private void textBoxPORT_TextChanged(object sender, EventArgs e)
-        {
-            _ConnectionService.HeadsetPort = textBoxPORT.Text;
-        }
-        private async void buttonCONNECT_Click(object sender, EventArgs e)
-        {
-            //await ActionAsync<Stages>(actionAsync: _DeployController.StartManualHeadsetConnection);
-        }
 
         private async void buttonAUTOSCANN_Click(object sender, EventArgs e)
         {
@@ -170,22 +158,11 @@ namespace EasyConnect
             await ActionAsync<Stages, int>(actionAsync: _DeployController.StartDeployment, value: maxDevices);
         }
 
-        private async void buttonDisconnect_Click(object sender, EventArgs e)
-        {
-            await ActionAsync<Stages>(actionAsync: _DeployController.StartHeadsetDisconnection);
-            CounterDevices();
-        }
-
         private async void CANCEL_Click(object sender, EventArgs e)
         {
             int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
             await _DeployController.StopDeployment(maxDevices);
             _AppManager.InAction = false;
-        }
-        private async void ConnectionFromMessageInfo(object sender, RegisterInformation e)
-        {
-            //await ActionAsync<Stages, RegisterInformation>(actionAsync: _DeployController.StartMessageInfoHeadsetConnection, e);
-            CounterDevices();
         }
         private void CounterDevices()
         {
@@ -211,13 +188,11 @@ namespace EasyConnect
                 _ = _NetworkService.GenerateManifest();
             });
         }
-
         private async void buttonSTARTEXPERIENCE_Click(object sender, EventArgs e)
         {
             int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
             await _DeployController.StartExperience(maxDevices);
         }
-
         private async Task ActionAsync<T>(Func<IProgress<ProgressStatus<T>>, Task> actionAsync)
         {
             if (_AppManager.InAction)

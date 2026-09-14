@@ -1,6 +1,8 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Legacy;
 using EasyConnect.Managers;
 using EasyConnect.Services;
+using EasyConnect.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EasyConnect
@@ -18,7 +20,8 @@ namespace EasyConnect
             Application.SetCompatibleTextRenderingDefault(false);
             
             var services = new ServiceCollection();
-            services.AddSingleton<MessageInfoHandler>();
+            services.AddSingleton<Utilities.Utilities>();
+            services.AddSingleton<WebSocketHandler>();
             services.AddSingleton<ConsoleService>();
             services.AddSingleton<DeviceManager>();
             services.AddSingleton<DeploymentService>();

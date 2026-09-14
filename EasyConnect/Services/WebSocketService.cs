@@ -1,6 +1,5 @@
 ﻿using EasyConnect.Models;
 using Fleck;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,12 +8,11 @@ namespace EasyConnect.Services
 {
     public class WebSocketService(
         NetworkService _NetworkService,
-        MessageInfoHandler _messageInfoHandler)
+        WebSocketHandler _webSocketHandler)
     {
         public  WebSocketServer? server;
-        private readonly ConcurrentDictionary<string, IWebSocketConnection> list = [];
         private readonly NetworkService networkService = _NetworkService;
-        private readonly MessageInfoHandler messageInfoHandler = _messageInfoHandler;
+        private readonly WebSocketHandler webSocketHandler = _webSocketHandler;
         private string serverIp = "";
         private string webSocketPort = "";
 
@@ -54,7 +52,7 @@ namespace EasyConnect.Services
             {
                 server?.Start(ws =>
                 {
-                    ws.OnOpen = () =>
+                    ws.OnOpen = async () =>
                     {
                         ws.ConnectionInfo.Headers.TryGetValue("key", out var value);
                         if (value == null || value != "PICO")
@@ -62,7 +60,13 @@ namespace EasyConnect.Services
                             ws.Close();
                             return;
                         }
-                        list.TryAdd(ws.ConnectionInfo.ClientIpAddress, ws);
+                        ws.ConnectionInfo.Headers.TryGetValue("serial", out var id);
+                        if (id == null)
+                        {
+                            ws.Close();
+                            return;
+                        }
+                        await webSocketHandler.Connection(id, ws);
                     };
 
                     ws.OnMessage = async message =>
@@ -77,7 +81,7 @@ namespace EasyConnect.Services
                     ws.OnClose = () =>
                     {
                         Debug.WriteLine("Connection closed");
-                        list.TryRemove(ws.ConnectionInfo.ClientIpAddress, out _);
+                        
                     };
                     ws.OnError = async Exception =>
                     {
@@ -102,19 +106,11 @@ namespace EasyConnect.Services
                 throw;
             }
         }
-        public async Task SendMessageToDevice(DeviceReport device, string message)
-        {
-            list.TryGetValue(device.Ip, out var result);
-            if (result == null)
-                return;
-
-            await result.Send(message);
-        }
         private async Task ProcessMessage(IReport deviceUpdated)
         {
             try
             {
-                var result = messageInfoHandler._handlers.TryGetValue(deviceUpdated.Type, out var handler);
+                var result = webSocketHandler._handlers.TryGetValue(deviceUpdated.Type, out var handler);
                 if (result && handler != null)
                     await handler(deviceUpdated);
 
@@ -122,7 +118,12 @@ namespace EasyConnect.Services
             catch (Exception ex)
             {
                 Debug.WriteLine("Error processing WebSocket message: " + ex);
+                throw;
             }
+        }
+        public async Task Close()
+        {
+            await webSocketHandler.CloseConnections();
         }
     }
 }

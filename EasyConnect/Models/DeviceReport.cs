@@ -1,4 +1,6 @@
-﻿namespace EasyConnect.Models
+﻿using static EasyConnect.Utilities.Utilities;
+
+namespace EasyConnect.Models
 {
     public class DeviceReport
     {
@@ -6,6 +8,40 @@
         {
             if (serialNumber != null)
                 SerialNumber = serialNumber;
+        }
+        public void OnMessage(IReport report)
+        {
+            var type = report.Type;
+            switch (type)
+            {
+                case MessageType.Register:
+                    UpdateRegister(report);
+                    break;
+                case MessageType.Deployment:
+                    UpdateDeploy(report);
+                    break;
+                case MessageType.Battery:
+                    UpdateBatteryLvl(report);
+                    break;
+                case MessageType.Heartbeat:
+                    UpdateHeartbeat(report);
+                    break;
+                case MessageType.Acknowledge:
+                    UpdateJobStatus(report);
+                    break;
+                default:
+                    break;
+            }
+        }
+        private long _lastjobId = 0;
+        public long LastJobId
+        {
+            get => _lastjobId;
+            set
+            {
+                if (_lastjobId != value)
+                    _lastjobId= value;
+            }
         }
         private string _ip = "";
         public string Ip
@@ -131,31 +167,44 @@
         }
         CancellationTokenSource _timerCts = new CancellationTokenSource();
 
-        public void UpdateDeploy(DeploymentInformation info)
+        public void UpdateDeploy(IReport info)
         {
-            JobStatus = info.Status;
-            CurrentFile = info.CurrentFile;
-            Percent = info.Percent;
-            Timestamp = info.Timestamp;
+            var payload = info.DecodePayload<DeploymentInformation>(_jsonSerializerOptions);
+            if (payload == null)
+                return;
+            JobStatus = payload.Status;
+            CurrentFile = payload.CurrentFile;
+            Percent = payload.Percent;
+            Timestamp = payload.Timestamp;
         }
-        public void UpdateJobStatus(Acknowledgeinformation info)
+        public void UpdateJobStatus(IReport info)
         {
-            JobStatus = info.Status;
+            var payload = info.DecodePayload<Acknowledgeinformation>(_jsonSerializerOptions);
+            if (payload == null)
+                return;
+            JobStatus = payload.Status;
+            LastJobId = (long)info.JobId!;
         }
-        public void UpdateBatteryLvl(BatteryInformation info)
+        public void UpdateBatteryLvl(IReport info)
         {
-            Battery = info.BatteryLvl;
+            var payload = info.DecodePayload<BatteryInformation>(_jsonSerializerOptions);
+            if (payload == null)
+                return;
+            Battery = payload.BatteryLvl;
         }
-        public void UpdateHeartbeat(HeartbeatInformation info)
+        public void UpdateHeartbeat(IReport info)
         {
             RestartLastSeenTimer();
         }
-        public void UpdateRegister(RegisterInformation info)
+        public void UpdateRegister(IReport info)
         {
-            Ip = info.Ip;
-            DeviceId = int.TryParse(info.DeviceNumber, out var deviceid) ? deviceid : InvalidId;
-            SerialNumber = info.SerialNumber;
-            Status = info.Status;
+            var payload = info.DecodePayload<RegisterInformation>(_jsonSerializerOptions);
+            if (payload == null)
+                return;
+            Ip = payload.Ip ?? "";
+            DeviceId = int.TryParse(payload.DeviceNumber, out var deviceid) ? deviceid : InvalidId;
+            SerialNumber = payload.SerialNumber;
+            Status = payload.Status;
         }
         private void RestartLastSeenTimer()
         {

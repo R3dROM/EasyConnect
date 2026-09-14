@@ -203,7 +203,7 @@ namespace EasyConnect.Controllers
                 {
                     byte[] data = Encoding.ASCII.GetBytes(json);
                     
-                    await udpClient.SendAsync(data, "192.168.1.255", 11000);
+                    await udpClient.SendAsync(data, _NetworkServices.BroadcastIp, 11000);
                 }
                 catch (ObjectDisposedException)
                 {
