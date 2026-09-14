@@ -37,12 +37,6 @@ namespace EasyConnect
             DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(WINDOW));
-            groupIPConnect = new GroupBox();
-            textBoxPORT = new TextBox();
-            textBoxIP = new TextBox();
-            labelPort = new Label();
-            labelIP = new Label();
-            buttonCONNECT = new Button();
             groupBoxSERVER = new GroupBox();
             buttonSTARTEXPERIENCE = new Button();
             CANCEL = new Button();
@@ -65,16 +59,11 @@ namespace EasyConnect
             adbServiceBindingSource1 = new BindingSource(components);
             deviceReportBindingSource = new BindingSource(components);
             adbServiceBindingSource = new BindingSource(components);
-            groupBox1 = new GroupBox();
-            buttonDisconnect = new Button();
             progressBar = new ProgressBar();
             fileSystemWatcher1 = new FileSystemWatcher();
-            labelAPKNAME = new Label();
-            labelAPK = new Label();
             buttonDeployPath = new Button();
             deployPath = new TextBox();
             label3 = new Label();
-            groupIPConnect.SuspendLayout();
             groupBoxSERVER.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownDEVICESDEPLOYMENT).BeginInit();
             groupBoxDEVICES.SuspendLayout();
@@ -84,73 +73,8 @@ namespace EasyConnect
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)deviceReportBindingSource).BeginInit();
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource).BeginInit();
-            groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)fileSystemWatcher1).BeginInit();
             SuspendLayout();
-            // 
-            // groupIPConnect
-            // 
-            groupIPConnect.Controls.Add(textBoxPORT);
-            groupIPConnect.Controls.Add(textBoxIP);
-            groupIPConnect.Controls.Add(labelPort);
-            groupIPConnect.Controls.Add(labelIP);
-            groupIPConnect.Location = new Point(166, 12);
-            groupIPConnect.Margin = new Padding(3, 2, 3, 2);
-            groupIPConnect.Name = "groupIPConnect";
-            groupIPConnect.Padding = new Padding(3, 2, 3, 2);
-            groupIPConnect.Size = new Size(435, 76);
-            groupIPConnect.TabIndex = 1;
-            groupIPConnect.TabStop = false;
-            groupIPConnect.Text = "Headset";
-            // 
-            // textBoxPORT
-            // 
-            textBoxPORT.Location = new Point(303, 22);
-            textBoxPORT.Margin = new Padding(3, 2, 3, 2);
-            textBoxPORT.Name = "textBoxPORT";
-            textBoxPORT.Size = new Size(100, 27);
-            textBoxPORT.TabIndex = 3;
-            textBoxPORT.Text = "5555";
-            textBoxPORT.TextAlign = HorizontalAlignment.Center;
-            textBoxPORT.TextChanged += textBoxPORT_TextChanged;
-            // 
-            // textBoxIP
-            // 
-            textBoxIP.Location = new Point(76, 22);
-            textBoxIP.Margin = new Padding(3, 2, 3, 2);
-            textBoxIP.Name = "textBoxIP";
-            textBoxIP.Size = new Size(151, 27);
-            textBoxIP.TabIndex = 2;
-            textBoxIP.TextChanged += textBoxIP_TextChanged;
-            // 
-            // labelPort
-            // 
-            labelPort.AutoSize = true;
-            labelPort.Location = new Point(234, 29);
-            labelPort.Name = "labelPort";
-            labelPort.Size = new Size(42, 16);
-            labelPort.TabIndex = 1;
-            labelPort.Text = "PORT:";
-            // 
-            // labelIP
-            // 
-            labelIP.AutoSize = true;
-            labelIP.Location = new Point(33, 30);
-            labelIP.Name = "labelIP";
-            labelIP.Size = new Size(22, 16);
-            labelIP.TabIndex = 0;
-            labelIP.Text = "IP:";
-            // 
-            // buttonCONNECT
-            // 
-            buttonCONNECT.Location = new Point(87, 21);
-            buttonCONNECT.Margin = new Padding(3, 2, 3, 2);
-            buttonCONNECT.Name = "buttonCONNECT";
-            buttonCONNECT.Size = new Size(140, 30);
-            buttonCONNECT.TabIndex = 4;
-            buttonCONNECT.Text = "CONNECT";
-            buttonCONNECT.UseVisualStyleBackColor = true;
-            buttonCONNECT.Click += buttonCONNECT_Click;
             // 
             // groupBoxSERVER
             // 
@@ -162,18 +86,18 @@ namespace EasyConnect
             groupBoxSERVER.Controls.Add(buttonUninstall);
             groupBoxSERVER.Controls.Add(labelCURRENTIP);
             groupBoxSERVER.Controls.Add(labelIPDEVICE);
-            groupBoxSERVER.Location = new Point(629, 12);
+            groupBoxSERVER.Location = new Point(222, 155);
             groupBoxSERVER.Margin = new Padding(3, 2, 3, 2);
             groupBoxSERVER.Name = "groupBoxSERVER";
             groupBoxSERVER.Padding = new Padding(3, 2, 3, 2);
-            groupBoxSERVER.Size = new Size(254, 262);
+            groupBoxSERVER.Size = new Size(611, 102);
             groupBoxSERVER.TabIndex = 2;
             groupBoxSERVER.TabStop = false;
             groupBoxSERVER.Text = "Actions";
             // 
             // buttonSTARTEXPERIENCE
             // 
-            buttonSTARTEXPERIENCE.Location = new Point(45, 206);
+            buttonSTARTEXPERIENCE.Location = new Point(406, 62);
             buttonSTARTEXPERIENCE.Margin = new Padding(3, 2, 3, 2);
             buttonSTARTEXPERIENCE.Name = "buttonSTARTEXPERIENCE";
             buttonSTARTEXPERIENCE.Size = new Size(170, 30);
@@ -184,7 +108,7 @@ namespace EasyConnect
             // 
             // CANCEL
             // 
-            CANCEL.Location = new Point(45, 137);
+            CANCEL.Location = new Point(230, 62);
             CANCEL.Name = "CANCEL";
             CANCEL.Size = new Size(170, 30);
             CANCEL.TabIndex = 22;
@@ -194,7 +118,7 @@ namespace EasyConnect
             // 
             // numericUpDownDEVICESDEPLOYMENT
             // 
-            numericUpDownDEVICESDEPLOYMENT.Location = new Point(191, 52);
+            numericUpDownDEVICESDEPLOYMENT.Location = new Point(167, 62);
             numericUpDownDEVICESDEPLOYMENT.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             numericUpDownDEVICESDEPLOYMENT.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDownDEVICESDEPLOYMENT.Name = "numericUpDownDEVICESDEPLOYMENT";
@@ -206,7 +130,7 @@ namespace EasyConnect
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(18, 55);
+            label1.Location = new Point(21, 68);
             label1.Name = "label1";
             label1.Size = new Size(140, 16);
             label1.TabIndex = 15;
@@ -214,7 +138,7 @@ namespace EasyConnect
             // 
             // buttonDeploy
             // 
-            buttonDeploy.Location = new Point(45, 101);
+            buttonDeploy.Location = new Point(230, 26);
             buttonDeploy.Name = "buttonDeploy";
             buttonDeploy.Size = new Size(170, 30);
             buttonDeploy.TabIndex = 16;
@@ -224,7 +148,7 @@ namespace EasyConnect
             // 
             // buttonUninstall
             // 
-            buttonUninstall.Location = new Point(45, 172);
+            buttonUninstall.Location = new Point(406, 26);
             buttonUninstall.Margin = new Padding(3, 2, 3, 2);
             buttonUninstall.Name = "buttonUninstall";
             buttonUninstall.Size = new Size(170, 30);
@@ -236,7 +160,7 @@ namespace EasyConnect
             // labelCURRENTIP
             // 
             labelCURRENTIP.AutoSize = true;
-            labelCURRENTIP.Location = new Point(15, 20);
+            labelCURRENTIP.Location = new Point(18, 33);
             labelCURRENTIP.Name = "labelCURRENTIP";
             labelCURRENTIP.Size = new Size(82, 16);
             labelCURRENTIP.TabIndex = 3;
@@ -245,7 +169,7 @@ namespace EasyConnect
             // labelIPDEVICE
             // 
             labelIPDEVICE.AutoSize = true;
-            labelIPDEVICE.Location = new Point(114, 20);
+            labelIPDEVICE.Location = new Point(117, 33);
             labelIPDEVICE.Name = "labelIPDEVICE";
             labelIPDEVICE.Size = new Size(58, 16);
             labelIPDEVICE.TabIndex = 4;
@@ -253,7 +177,7 @@ namespace EasyConnect
             // 
             // textBoxServerIp
             // 
-            textBoxServerIp.Location = new Point(289, 171);
+            textBoxServerIp.Location = new Point(339, 34);
             textBoxServerIp.Name = "textBoxServerIp";
             textBoxServerIp.Size = new Size(147, 27);
             textBoxServerIp.TabIndex = 18;
@@ -262,7 +186,7 @@ namespace EasyConnect
             // labelServerIp
             // 
             labelServerIp.AutoSize = true;
-            labelServerIp.Location = new Point(169, 174);
+            labelServerIp.Location = new Point(222, 45);
             labelServerIp.Name = "labelServerIp";
             labelServerIp.Size = new Size(71, 16);
             labelServerIp.TabIndex = 17;
@@ -272,7 +196,7 @@ namespace EasyConnect
             // labelBUNDLEID
             // 
             labelBUNDLEID.AutoSize = true;
-            labelBUNDLEID.Location = new Point(169, 254);
+            labelBUNDLEID.Location = new Point(222, 117);
             labelBUNDLEID.Name = "labelBUNDLEID";
             labelBUNDLEID.Size = new Size(75, 16);
             labelBUNDLEID.TabIndex = 10;
@@ -282,7 +206,7 @@ namespace EasyConnect
             // labelBUNDLE
             // 
             labelBUNDLE.AutoSize = true;
-            labelBUNDLE.Location = new Point(289, 254);
+            labelBUNDLE.Location = new Point(339, 117);
             labelBUNDLE.Margin = new Padding(4, 0, 4, 0);
             labelBUNDLE.Name = "labelBUNDLE";
             labelBUNDLE.Size = new Size(83, 16);
@@ -295,21 +219,21 @@ namespace EasyConnect
             listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listBoxLogs.FormattingEnabled = true;
             listBoxLogs.HorizontalScrollbar = true;
-            listBoxLogs.Location = new Point(86, 602);
+            listBoxLogs.Location = new Point(51, 541);
             listBoxLogs.Margin = new Padding(3, 2, 3, 2);
             listBoxLogs.Name = "listBoxLogs";
-            listBoxLogs.Size = new Size(857, 116);
+            listBoxLogs.Size = new Size(957, 180);
             listBoxLogs.TabIndex = 6;
             // 
             // groupBoxDEVICES
             // 
             groupBoxDEVICES.Controls.Add(counter);
             groupBoxDEVICES.Controls.Add(dataGridView1);
-            groupBoxDEVICES.Location = new Point(83, 327);
+            groupBoxDEVICES.Location = new Point(44, 282);
             groupBoxDEVICES.Margin = new Padding(3, 2, 3, 2);
             groupBoxDEVICES.Name = "groupBoxDEVICES";
             groupBoxDEVICES.Padding = new Padding(3, 2, 3, 2);
-            groupBoxDEVICES.Size = new Size(860, 255);
+            groupBoxDEVICES.Size = new Size(971, 255);
             groupBoxDEVICES.TabIndex = 5;
             groupBoxDEVICES.TabStop = false;
             groupBoxDEVICES.Text = "DEVICES";
@@ -369,7 +293,7 @@ namespace EasyConnect
             dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle5;
             dataGridView1.RowTemplate.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.Size = new Size(846, 225);
+            dataGridView1.Size = new Size(957, 225);
             dataGridView1.TabIndex = 1;
             // 
             // deviceManagerBindingSource
@@ -380,35 +304,11 @@ namespace EasyConnect
             // 
             deviceInfoBindingSource.DataSource = typeof(Models.DeviceInfo);
             // 
-            // groupBox1
-            // 
-            groupBox1.Controls.Add(buttonDisconnect);
-            groupBox1.Controls.Add(buttonCONNECT);
-            groupBox1.Location = new Point(166, 101);
-            groupBox1.Margin = new Padding(3, 2, 3, 2);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Padding = new Padding(3, 2, 3, 2);
-            groupBox1.Size = new Size(435, 61);
-            groupBox1.TabIndex = 13;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Connection";
-            // 
-            // buttonDisconnect
-            // 
-            buttonDisconnect.Location = new Point(236, 21);
-            buttonDisconnect.Margin = new Padding(3, 2, 3, 2);
-            buttonDisconnect.Name = "buttonDisconnect";
-            buttonDisconnect.Size = new Size(153, 30);
-            buttonDisconnect.TabIndex = 13;
-            buttonDisconnect.Text = "DISCONNECT";
-            buttonDisconnect.UseVisualStyleBackColor = true;
-            buttonDisconnect.Click += buttonDisconnect_Click;
-            // 
             // progressBar
             // 
-            progressBar.Location = new Point(86, 742);
+            progressBar.Location = new Point(51, 742);
             progressBar.Name = "progressBar";
-            progressBar.Size = new Size(857, 29);
+            progressBar.Size = new Size(957, 29);
             progressBar.TabIndex = 16;
             // 
             // fileSystemWatcher1
@@ -416,29 +316,9 @@ namespace EasyConnect
             fileSystemWatcher1.EnableRaisingEvents = true;
             fileSystemWatcher1.SynchronizingObject = this;
             // 
-            // labelAPKNAME
-            // 
-            labelAPKNAME.AutoSize = true;
-            labelAPKNAME.Location = new Point(169, 285);
-            labelAPKNAME.Name = "labelAPKNAME";
-            labelAPKNAME.Size = new Size(72, 16);
-            labelAPKNAME.TabIndex = 19;
-            labelAPKNAME.Text = "APK NAME:";
-            labelAPKNAME.TextAlign = ContentAlignment.BottomLeft;
-            // 
-            // labelAPK
-            // 
-            labelAPK.AutoSize = true;
-            labelAPK.Location = new Point(289, 285);
-            labelAPK.Margin = new Padding(4, 0, 4, 0);
-            labelAPK.Name = "labelAPK";
-            labelAPK.Size = new Size(83, 16);
-            labelAPK.TabIndex = 20;
-            labelAPK.Text = "com.exam.ple";
-            // 
             // buttonDeployPath
             // 
-            buttonDeployPath.Location = new Point(442, 212);
+            buttonDeployPath.Location = new Point(711, 75);
             buttonDeployPath.Name = "buttonDeployPath";
             buttonDeployPath.Size = new Size(94, 29);
             buttonDeployPath.TabIndex = 23;
@@ -450,16 +330,16 @@ namespace EasyConnect
             // 
             deployPath.BackColor = SystemColors.Window;
             deployPath.Font = new Font("Segoe UI", 9F);
-            deployPath.Location = new Point(289, 212);
+            deployPath.Location = new Point(339, 75);
             deployPath.Name = "deployPath";
             deployPath.ReadOnly = true;
-            deployPath.Size = new Size(147, 23);
+            deployPath.Size = new Size(366, 23);
             deployPath.TabIndex = 22;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(169, 216);
+            label3.Location = new Point(222, 82);
             label3.Name = "label3";
             label3.Size = new Size(93, 16);
             label3.TabIndex = 21;
@@ -474,27 +354,21 @@ namespace EasyConnect
             ClientSize = new Size(1056, 803);
             Controls.Add(buttonDeployPath);
             Controls.Add(deployPath);
+            Controls.Add(groupBoxSERVER);
             Controls.Add(label3);
-            Controls.Add(labelAPKNAME);
-            Controls.Add(labelAPK);
             Controls.Add(progressBar);
             Controls.Add(textBoxServerIp);
-            Controls.Add(groupBox1);
             Controls.Add(labelServerIp);
             Controls.Add(groupBoxDEVICES);
             Controls.Add(labelBUNDLEID);
             Controls.Add(labelBUNDLE);
             Controls.Add(listBoxLogs);
-            Controls.Add(groupBoxSERVER);
-            Controls.Add(groupIPConnect);
             Font = new Font("Yu Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(3, 2, 3, 2);
             Name = "WINDOW";
             Text = "EASY LINK";
             Load += Form1_Load;
-            groupIPConnect.ResumeLayout(false);
-            groupIPConnect.PerformLayout();
             groupBoxSERVER.ResumeLayout(false);
             groupBoxSERVER.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownDEVICESDEPLOYMENT).EndInit();
@@ -506,7 +380,6 @@ namespace EasyConnect
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource1).EndInit();
             ((System.ComponentModel.ISupportInitialize)deviceReportBindingSource).EndInit();
             ((System.ComponentModel.ISupportInitialize)adbServiceBindingSource).EndInit();
-            groupBox1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)fileSystemWatcher1).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -514,12 +387,6 @@ namespace EasyConnect
         }
 
         #endregion
-        private System.Windows.Forms.GroupBox groupIPConnect;
-        private System.Windows.Forms.TextBox textBoxPORT;
-        private System.Windows.Forms.TextBox textBoxIP;
-        private System.Windows.Forms.Label labelPort;
-        private System.Windows.Forms.Label labelIP;
-        private System.Windows.Forms.Button buttonCONNECT;
         private System.Windows.Forms.GroupBox groupBoxSERVER;
         private System.Windows.Forms.ListBox listBoxLogs;
         private System.Windows.Forms.Label labelCURRENTIP;
@@ -531,16 +398,12 @@ namespace EasyConnect
         private System.Windows.Forms.BindingSource adbServiceBindingSource;
         private System.Windows.Forms.BindingSource adbServiceBindingSource1;
         private System.Windows.Forms.BindingSource deviceReportBindingSource;
-        private GroupBox groupBox1;
         private Button buttonUninstall;
         private ProgressBar progressBar;
         private Label labelServerIp;
         private TextBox textBoxServerIp;
         private Button buttonDeploy;
         private FileSystemWatcher fileSystemWatcher1;
-        private Button buttonDisconnect;
-        private Label labelAPKNAME;
-        private Label labelAPK;
         private Label label1;
         private NumericUpDown numericUpDownDEVICESDEPLOYMENT;
         private BindingSource deviceManagerBindingSource;

@@ -1,6 +1,4 @@
-﻿using EasyConnect.Managers;
-using EasyConnect.Models;
-using System.Diagnostics;
+﻿using EasyConnect.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,9 +7,9 @@ namespace EasyConnect.Services
     public class DeploymentService(
         NetworkService networkService, 
         JobTrackerService jobTrackerService,
-        WebSocketService webSocketService)
+        WebSocketHandler webSocketService)
     {
-        private readonly WebSocketService _websocketService = webSocketService;
+        private readonly WebSocketHandler _websocketHandler = webSocketService;
         private readonly NetworkService _networkService = networkService;
         private readonly JobTrackerService _jobTracker = jobTrackerService;
         private readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -27,13 +25,12 @@ namespace EasyConnect.Services
 
         public async Task<DeviceJobResult> DeploymentAsync(DeviceReport device)
         {
-            Debug.WriteLine("Start DeploymentAsync");
             var id = device.SerialNumber;
-            var jobId = _jobTracker.Register(id!);
-            Command command = new(CommandType.Deployment, jobId);
+            Command command = new(CommandType.Deployment);
             command.PutExtra("url", $"http://{_networkService.ServerIp}:{_networkService.ServerPort}/{_networkService.FolderBundle}");
             command.PutExtra("bundle", _networkService.Bundle);
-            command.PutExtra("jobId", jobId);
+            var jobId = _jobTracker.Register(id!, command);
+            command.Id = jobId;
 
             var evt = await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device);
             if (evt == null || evt.ExitCode != 0)
@@ -54,55 +51,35 @@ namespace EasyConnect.Services
                 DurationMs = evt.DurationMs
             };
         }
-        //public async Task<DeviceJobResult> UninstallAsync(DeviceReport device)
-        //{
-        //    var jobId = _jobTracker.Register();
-        //    var cmd = $"shell pm uninstall {_networkService.Bundle}";
-        //    var result = await _adbService.ExecuteCommandOnDevice(device.Ip, cmd);
-        //    if (result.ExitCode != 0)
-        //    {
-        //        var failJob = new DeviceJobResult
-        //        {
-        //            JobId = jobId,
-        //            ExitCode = result.ExitCode,
-        //            Output = result.Output
-        //        };
-        //        await _jobTracker.Complete(failJob);
-        //        return failJob;
-        //    }
-        //    var job = new DeviceJobResult
-        //    {
-        //        JobId = jobId,
-        //        ExitCode = 0,
-        //        Output = result.Output
-        //    };
-        //    await _jobTracker.Complete(job);
-        //    return job;
-        //}
         public async Task<DeviceJobResult>StopAsync(DeviceReport device)
         {
             var id = device.SerialNumber;
-            var jobId = _jobTracker.Register(id!);
-            Command command = new(CommandType.Deployment, jobId);
+            Command command = new(CommandType.Deployment);
             command.PutExtra("cancellation", true);
+            var jobId = _jobTracker.Register(id!, command);
+            command.Id = jobId;
 
             return await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device);
         }
         public async Task<DeviceJobResult> StartActivityManager(DeviceReport device)
         {
             var id = device.SerialNumber;
-            var jobId = _jobTracker.Register(id!);
-            Command command = new(CommandType.Activity, jobId);
+            Command command = new(CommandType.Activity);
             command.PutExtra("bundle", _networkService.Bundle);
-            command.PutExtra("jobId", jobId);
+            var jobId = _jobTracker.Register(id!, command);
+            command.Id = jobId;
 
             return await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device);
         }
         private async Task<DeviceJobResult> SendCommand(string json, long jobId, DeviceReport device)
         {
-            await _websocketService.SendMessageToDevice(device, json);
+            await _websocketHandler.SendMessageToDevice(device, json);
             var job = await _jobTracker.WaitForCompletion(jobId);
             return job;
+        }
+        public async Task ReSendCommand(string json, DeviceReport device)
+        {
+            await _websocketHandler.SendMessageToDevice(device, json);
         }
     }
 }

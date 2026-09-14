@@ -1,19 +1,13 @@
-﻿using EasyConnect.Controllers;
-using EasyConnect.Managers;
+﻿using EasyConnect.Managers;
 using EasyConnect.Models;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 
 namespace EasyConnect.Services
 {
     public class NetworkConfigurationService(
         NetworkService _networkService,
-        DeviceManager _deviceManager,
-        AdbService _adbService)
+        DeviceManager _deviceManager)
     {
-        private readonly AdbService _adbService = _adbService;
         private readonly DeviceManager _deviceManager = _deviceManager;
         private readonly NetworkService _networkService = _networkService;
         private Manifest? _manifest = null;
@@ -53,14 +47,13 @@ namespace EasyConnect.Services
                 "Configuration generated",
                 async () =>
                 {
-                    JsonSerializerOptions options = new() { WriteIndented = true };
-                    var snapshot = _deviceManager.DevicesBindingList.ToList();
+                    var snapshot = _deviceManager.DevicesDictionary.ToList();
                     foreach (var item in snapshot)
                     {
                         var config = new
                         {
-                            DeviceId = item.DeviceId.ToString(),
-                            DisplayName = item.DeviceId.ToString(),
+                            DeviceId = item.Value.DeviceId.ToString(),
+                            DisplayName = item.Value.DeviceId.ToString(),
                             IsAdmin = "false",
                             Port = "7777",
                             Ip = ExperienceServerIp,
@@ -68,8 +61,8 @@ namespace EasyConnect.Services
                             FileTransferProtocol = 1,
                             HttpPort = 9090
                         };
-                        string json = JsonSerializer.Serialize(config, options);
-                        await _networkService.PUTConfigLocal(json, "CONFIGS", $"{item.SerialNumber}.json");
+                        string json = JsonSerializer.Serialize(config);
+                        await _networkService.SaveLocalFile(json, "CONFIGS", $"{item.Value.SerialNumber}.json");
                     }
                     await _networkService.GenerateManifest();
                     return new DeviceCommandResult
@@ -78,7 +71,8 @@ namespace EasyConnect.Services
                         ExitCode = 0,
                         Output = "Configuration Success",
                     };
-                });
+                }
+            );
         }
     }
 }

@@ -1,8 +1,11 @@
 ﻿using EasyConnect.Controllers;
+using EasyConnect.Legacy;
 using EasyConnect.Models;
 using EasyConnect.Services;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EasyConnect.Managers
 {
@@ -171,8 +174,9 @@ namespace EasyConnect.Managers
             try
             {
                 Debug.WriteLine("CLOSING EVERYTHING!!");
-                _websocket.server?.Dispose();
-                await _adb.ResetAdb();
+                await _websocket.Close();
+                //_websocket.server?.Dispose();
+                //await _adb.ResetAdb();
                 await _network.StopServerConnection();
             }
             catch (Exception ex)
