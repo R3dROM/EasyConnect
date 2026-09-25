@@ -34,8 +34,8 @@ namespace EasyConnect.Models
                 }
             }
         }
-        private string? deviceId;
-        public string? DeviceId
+        private int? deviceId;
+        public int? DeviceId
         {
             get => deviceId;
             set
@@ -44,6 +44,19 @@ namespace EasyConnect.Models
                 {
                     deviceId = value;
                     OnPropertyChanged(nameof(DeviceId));
+                }
+            }
+        }
+        private string? _puiVersion = string.Empty;
+        public string? PuiVersion
+        {
+            get => _puiVersion;
+            set
+            {
+                if (_puiVersion != value)
+                {
+                    _puiVersion = value;
+                    OnPropertyChanged(nameof(PuiVersion));
                 }
             }
         }
@@ -73,6 +86,32 @@ namespace EasyConnect.Models
                 }
             }
         }
+        private JobType _typeOfJob = JobType.Connection;
+        public JobType TypeOfJob
+        {
+            get => _typeOfJob;
+            set
+            {
+                if (_typeOfJob != value)
+                {
+                    _typeOfJob = value;
+                    OnPropertyChanged(nameof(TypeOfJob));
+                }
+            }
+        }
+        private string _logs = string.Empty;
+        public string Logs
+        {
+            get => _logs;
+            set
+            {
+                if (_logs != value)
+                {
+                    _logs = value;
+                    OnPropertyChanged(nameof(Logs));
+                }
+            }
+        }
         private int? _battery;
         public int? Battery
         {
@@ -95,10 +134,18 @@ namespace EasyConnect.Models
         {
             Ip = report.Ip;
             SerialNumber = report.SerialNumber;
-            DeviceId = report.DeviceId?.ToString();
+            DeviceId = report.DeviceId;
             Status = report.Status;
             JobStatus = report.JobStatus;
+            TypeOfJob = report.TypeOfJob;
+            if (TypeOfJob != JobType.Deployment)
+                Logs = "";
+            else
+            {
+                Logs = $"{report.Percent} %";
+            }
             Battery = report.Battery;
+            PuiVersion = report.PUIVersion;
         }
     }
 }

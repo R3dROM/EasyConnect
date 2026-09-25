@@ -2,10 +2,11 @@
 using EasyConnect.Legacy;
 using EasyConnect.Managers;
 using EasyConnect.Models;
+using EasyConnect.Presentation;
 using EasyConnect.Services;
 using System.ComponentModel;
-using System.Drawing.Text;
 using System.Text.RegularExpressions;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect
 {
@@ -14,13 +15,14 @@ namespace EasyConnect
         private SynchronizationContext? _UiContext;
 
         private readonly AppManager _AppManager;
+        private readonly DevicePresentation _DevicePresentation;
         private readonly DeployController _DeployController;
-
         private readonly DeploymentService _DeploymentService;
         private readonly ConnectionService _ConnectionService;
         private readonly WebSocketService _WebSocketService;
         private readonly AdbService _AdbService;
         private readonly NetworkService _NetworkService;
+        private readonly NetworkPresentation _NetworkPresentation;
         private readonly NetworkConfigurationService _NetworkingConfigurationService;
         private readonly HttpController _HttpController;
 
@@ -28,12 +30,18 @@ namespace EasyConnect
 
         public WINDOW(
             NetworkConfigurationService _NetworkingConfigurationService,
-            NetworkService _NetworkService, WebSocketService _WebSocketService,
-            AdbService _AdbService, DeployController _DeployController,
-            InfoController _InfoController, HttpController _HttpController,
-            AppManager _AppManager, DeploymentService _DeploymentService,
+            NetworkService _NetworkService,
+            NetworkPresentation _NetworkState, 
+            WebSocketService _WebSocketService,
+            AdbService _AdbService, 
+            DeployController _DeployController,
+            InfoController _InfoController, 
+            HttpController _HttpController,
+            AppManager _AppManager, 
+            DeploymentService _DeploymentService,
             ConnectionService _ConnectionService,
-            DeviceManager _DeviceManager
+            DeviceManager _DeviceManager,
+            DevicePresentation _DevicePresentation
             )
         {
             InitializeComponent();
@@ -47,6 +55,8 @@ namespace EasyConnect
             this._AppManager = _AppManager;
             this._DeviceManager = _DeviceManager;
             this._HttpController = _HttpController;
+            this._DevicePresentation = _DevicePresentation;
+            this._NetworkPresentation = _NetworkState;
 
             _AppManager.PropertyChanged += InputUserHandler!;
         }
@@ -88,18 +98,32 @@ namespace EasyConnect
             if (_UiContext != null)
             {
                 _AppManager.ListBoxLogs = listBoxLogs;
-                await _DeviceManager.StartDeviceManager(_UiContext);
+                await _DevicePresentation.StartDeviceManager(_UiContext);
                 listBoxLogs.DrawItem += _AppManager.ListBoxLogs_DrawItem!;
 
-                labelBUNDLE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
-                labelIPDEVICE.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ServerIp), false, DataSourceUpdateMode.OnPropertyChanged);
-                //labelAPK.DataBindings.Add("Text", _NetworkService, nameof(_NetworkService.ApkName), false, DataSourceUpdateMode.OnPropertyChanged);
-
-                dataGridView1.DataSource = _DeviceManager.DevicesBindingList;
-                _ = _HttpController.sendUdpPacket();
+                labelBUNDLE.DataBindings.Add("Text", _NetworkPresentation, nameof(_NetworkPresentation.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
+                labelIPDEVICE.DataBindings.Add("Text", _NetworkPresentation, nameof(_NetworkPresentation.ServerIp), false, DataSourceUpdateMode.OnPropertyChanged);
+                dataGridView1.DataSource = _DevicePresentation.DevicesBindingList;
+                dataGridView1.RowPostPaint += dataGridView1_RowPostPaint;
+                _ = _HttpController.InitializemDnsService();
             }
         }
+        private void dataGridView1_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
+        {
+            var grid = (DataGridView)sender;
 
+            var rowNumber = (e.RowIndex + 1).ToString();
+
+            using var brush = new SolidBrush(grid.RowHeadersDefaultCellStyle.ForeColor);
+
+            e.Graphics.DrawString(
+                rowNumber,
+                grid.Font,
+                brush,
+                e.RowBounds.Left + 20,
+                e.RowBounds.Top + 4
+            );
+        }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -130,21 +154,10 @@ namespace EasyConnect
             }
         }
 
-        private async void buttonAUTOSCANN_Click(object sender, EventArgs e)
-        {
-            //await ActionAsync<Stages>(actionAsync: _DeployController.StartAutoHeadsetConnection);
-            CounterDevices();
-        }
-
         private async void buttonUninstall_Click(object sender, EventArgs e)
         {
             int maxDevices = (int)numericUpDownDEVICESDEPLOYMENT.Value;
-            //await ActionAsync<DeploymentState, int>(actionAsync: _DeployController.StartUninstall, maxDevices);
-        }
-
-        private async void buttonGenerate_Click(object sender, EventArgs e)
-        {
-            await ActionAsync<Stages>(actionAsync: _NetworkingConfigurationService.GenerateNetworkingConfigurationJson);
+            await _DeployController.StartUninstall(maxDevices);
         }
 
         private void textBoxServerIp_TextChanged(object sender, EventArgs e)
@@ -164,15 +177,6 @@ namespace EasyConnect
             await _DeployController.StopDeployment(maxDevices);
             _AppManager.InAction = false;
         }
-        private void CounterDevices()
-        {
-            if (InvokeRequired)
-            {
-                Invoke(() => CounterDevices);
-                return;
-            }
-            counter.Text = _DeviceManager.DevicesDictionary.Count.ToString();
-        }
         private void buttonDeployPath_Click(object sender, EventArgs e)
         {
             var pattern = new Regex(@"(?:^|\\)([^\\]+)\\?$");
@@ -182,10 +186,7 @@ namespace EasyConnect
                 deployPath.Text = selectedPath;
                 match = pattern.Match(selectedPath!);
                 if (match.Success)
-                    _NetworkService.FolderBundle = match.Groups[1].Value;
-                _NetworkService.DeployPath = selectedPath!;
-
-                _ = _NetworkService.GenerateManifest();
+                    _ = _NetworkService.GenerateManifest(match.Groups[1].Value, selectedPath!);
             });
         }
         private async void buttonSTARTEXPERIENCE_Click(object sender, EventArgs e)
@@ -200,7 +201,7 @@ namespace EasyConnect
             try
             {
                 _AppManager.InAction = true;
-                var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+                var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
                 await actionAsync(progress);
             }
             catch (Exception)
@@ -215,7 +216,7 @@ namespace EasyConnect
         }
         private async Task Event<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
         {
-            var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+            var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
             await actionAsync(progress, value);
         }
         private async Task ActionAsync<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
@@ -254,7 +255,7 @@ namespace EasyConnect
             try
             {
                 _AppManager.InAction = true;
-                var progress = ProgressStatusService.ProgressUpdate<T>(progressBar, listBoxLogs);
+                var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
                 if (actionAsync != null)
                     return await actionAsync(progress);
                 return await functionAsync();

@@ -1,8 +1,9 @@
-﻿using static EasyConnect.Utilities.Utilities;
+﻿using System.ComponentModel;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Models
 {
-    public class DeviceReport
+    public class DeviceReport: INotifyPropertyChanged
     {
         public DeviceReport(string? serialNumber = null)
         {
@@ -81,6 +82,18 @@ namespace EasyConnect.Models
                 }
             }
         }
+        private string? _puiVersion = string.Empty;
+        public string? PUIVersion
+        {
+            get => _puiVersion;
+            set
+            {
+                if (_puiVersion != value)
+                {
+                    _puiVersion = value;
+                }
+            }
+        }
         private int? _battery;
         public int? Battery
         {
@@ -102,6 +115,7 @@ namespace EasyConnect.Models
                 if (_status != value && value != null)
                 {
                     _status = value;
+                    OnPropertyChanged(nameof(Status));
                 }
             }
         }
@@ -114,6 +128,18 @@ namespace EasyConnect.Models
                 if (_jobStatus != value && value != null)
                 {
                     _jobStatus = value;
+                }
+            }
+        }
+        private JobType _typeOfJob = JobType.Connection;
+        public JobType TypeOfJob
+        {
+            get => _typeOfJob;
+            set
+            {
+                if (_typeOfJob != value)
+                {
+                    _typeOfJob = value;
                 }
             }
         }
@@ -183,6 +209,7 @@ namespace EasyConnect.Models
             if (payload == null)
                 return;
             JobStatus = payload.Status;
+            TypeOfJob = payload.TypeOfJob;
             LastJobId = (long)info.JobId!;
         }
         public void UpdateBatteryLvl(IReport info)
@@ -202,9 +229,10 @@ namespace EasyConnect.Models
             if (payload == null)
                 return;
             Ip = payload.Ip ?? "";
-            DeviceId = int.TryParse(payload.DeviceNumber, out var deviceid) ? deviceid : InvalidId;
+            DeviceId = payload.DeviceNumber ?? InvalidId;
             SerialNumber = payload.SerialNumber;
             Status = payload.Status;
+            PUIVersion = payload.PuiVersion;
         }
         private void RestartLastSeenTimer()
         {
@@ -222,17 +250,22 @@ namespace EasyConnect.Models
         {
             try
             {
-                while (true)
+                Status = DeviceStatus.Online;
+                while (!token.IsCancellationRequested)
                 {
-                    token.ThrowIfCancellationRequested();
 
                     LastSeen = _lastSeen;
                     _lastSeen++;
 
                     await Task.Delay(1000, token);
 
-                    if (_lastSeen >= 60)
+                    if (_lastSeen >= 180)
+                    {
                         Status = DeviceStatus.Offline;
+                        JobStatus = JobState.Waiting;
+                        TypeOfJob = JobType.Connection;
+                        return;
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -240,5 +273,8 @@ namespace EasyConnect.Models
                 // Timer reemplazado por uno nuevo
             }
         }
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

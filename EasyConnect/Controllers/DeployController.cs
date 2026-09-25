@@ -2,6 +2,7 @@
 using EasyConnect.Models;
 using EasyConnect.Services;
 using System.Diagnostics;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Controllers
 {
@@ -19,42 +20,49 @@ namespace EasyConnect.Controllers
         private readonly NetworkService _networkService = networkService;
         private readonly WebSocketService _websocketService = websocketService;
         private readonly DeploymentService _deploymentService = deploymentService;
-        
-        //public async Task StartUninstall(IProgress<ProgressStatus<DeploymentState>> progress, int maxDevices)
-        //{
-        //    var snapshot = _deviceManager.DevicesDictionary.ToArray();
-        //    var semaphore = new SemaphoreSlim(maxDevices);
+        private CancellationTokenSource? cancellationTokenSource = new();
 
-        //    var tasks = snapshot.Select(async d =>
-        //    {
-        //        await semaphore.WaitAsync();
-        //        try
-        //        {
-        //            await _deploymentService.UninstallAsync(d.Value);
-        //        }
-        //        catch (Exception)
-        //        {
-
-        //            throw;
-        //        }
-        //        finally
-        //        {
-        //            semaphore.Release();
-        //        }
-        //    });
-        //    await Task.WhenAll(tasks);
-        //}
-        public async Task StartExperience(int maxDevices)
+        public async Task StartUninstall(int maxDevices)
         {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
+            var snapshot = _deviceManager.DevicesDictionary;
             var semaphore = new SemaphoreSlim(maxDevices);
+
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
 
             var tasks = snapshot.Select(async d =>
             {
                 await semaphore.WaitAsync();
                 try
                 {
-                    await _deploymentService.StartActivityManager(d.Value);
+                    await _deploymentService.StartActivityManager(d, ActivityType.UninstallExperience, cancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"EXCEPTION ON STARTING APP: {ex.Message}");
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
+        }
+        public async Task StartExperience(int maxDevices)
+        {
+            var snapshot = _deviceManager.DevicesDictionary;
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await _deploymentService.StartActivityManager(d, ActivityType.StartExperience, cancellationTokenSource.Token);
                 }
                 catch (Exception ex)
                 {
@@ -70,52 +78,56 @@ namespace EasyConnect.Controllers
         }
         public async Task StartDeployment(IProgress<ProgressStatus<Stages>> progress, int maxDevices)
         {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
+            var snapshot = _deviceManager.DevicesDictionary;
             var semaphore = new SemaphoreSlim(maxDevices);
 
-            await _networkConfigurationService.GenerateNetworkingConfigurationJson(progress);
-            var tasks = snapshot.Select(async d =>
-            {
-                await semaphore.WaitAsync();
-                try
-                {
-                    Debug.WriteLine("Start deploy Controller");
-                    await _deploymentService.DeploymentAsync(d.Value);
-                    Debug.WriteLine("end deploy Controller");
-                    //await _deploymentService.ExecutePipeline(d.Value, _deploymentService.DeploymentPipeline(), progress);
-                }
-                catch (Exception)
-                {
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
 
-                    throw;
-                }
-                finally 
-                { 
-                    semaphore.Release(); 
-                }
-            });
-            await Task.WhenAll(tasks);
+            try
+            {
+                await _networkConfigurationService.GenerateNetworkingConfigurationJson(progress);
+                var tasks = snapshot.Select(async d =>
+                {
+                    await semaphore.WaitAsync(cancellationTokenSource.Token);
+                    try
+                    {
+                        Debug.WriteLine("Start deploy Controller");
+                        await _deploymentService.DeploymentAsync(d, cancellationTokenSource.Token);
+                        Debug.WriteLine("end deploy Controller");
+                    }
+                    catch (Exception)
+                    {
+
+                        throw;
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+                await Task.WhenAll(tasks);
+            }
+            finally
+            {
+                cancellationTokenSource?.Dispose();
+                cancellationTokenSource = null;
+            }
         }
         public async Task StopDeployment(int maxDevices)
         {
-            var snapshot = _deviceManager.DevicesDictionary.ToArray();
-            var semaphore = new SemaphoreSlim(maxDevices);
-
+            cancellationTokenSource?.Cancel();
+            var snapshot = _deviceManager.DevicesDictionary;
             var tasks = snapshot.Select(async d =>
             {
-                await semaphore.WaitAsync();
                 try
                 {
-                    await _deploymentService.StopAsync(d.Value);
+                    await _deploymentService.StopAsync(d);
                 }
                 catch (Exception)
                 {
 
                     throw;
-                }
-                finally
-                {
-                    semaphore.Release();
                 }
             });
             await Task.WhenAll(tasks);
@@ -144,13 +156,13 @@ namespace EasyConnect.Controllers
         {
             try
             {
-                await ProgressStatusService.MessageStatus(progress, Stages.Disconnect, "Starting disconnection service");
+                await ProgressStatus.MessageStatus(progress, Stages.Disconnect, "Starting disconnection service");
                 await _connectionService.AdbDisconnect(progress);
-                await ProgressStatusService.MessageStatus(progress, Stages.Disconnect, "Disconnection service end successfully");
+                await ProgressStatus.MessageStatus(progress, Stages.Disconnect, "Disconnection service end successfully");
             }
             catch (Exception)
             {
-                await ProgressStatusService.MessageStatus(progress, Stages.Disconnect, "Disconnection service end with failure");
+                await ProgressStatus.MessageStatus(progress, Stages.Disconnect, "Disconnection service end with failure");
             }
         }
         //public async Task StartAutoHeadsetConnection(IProgress<ProgressStatus<Stages>> progress)
@@ -176,13 +188,13 @@ namespace EasyConnect.Controllers
             try
             {
                 //var result = await _connectionService.AdbConnectionFromMessageInfo(progress, messageInfo);
-                await ProgressStatusService.OneLine(progress, 100, Stages.Connect, "Successfull Connection");
+                await ProgressStatus.OneLine(progress, 100, Stages.Connect, "Successfull Connection");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error al iniciar websocket");
                 //await _websocketService.StopWebSocketConnectionAsync(progress);
-                await ProgressStatusService.OneLine(progress, 100, Stages.Connect, $"Failure in Connection: {ex.Message}");
+                await ProgressStatus.OneLine(progress, 100, Stages.Connect, $"Failure in Connection: {ex.Message}");
                 throw;
             }
         }

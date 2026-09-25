@@ -2,6 +2,7 @@
 using EasyConnect.Managers;
 using EasyConnect.Models;
 using System.Diagnostics;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Services
 {
@@ -79,7 +80,7 @@ namespace EasyConnect.Services
                 portHeadset= _headsetPort;
             try
             {
-                var result = await ProgressStatusService.Step(
+                var result = await ProgressStatus.Step(
                     progress,
                     0,
                     100,
@@ -96,7 +97,7 @@ namespace EasyConnect.Services
                             Output = result.Output
                         };
                     });
-                await ProgressStatusService.MessageStatus(progress, Stages.Disconnect, result.Output);
+                await ProgressStatus.MessageStatus(progress, Stages.Disconnect, result.Output);
                 if (result.ExitCode != 0)
                 {
                     throw new Exception(result.Output);

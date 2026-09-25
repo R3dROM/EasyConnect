@@ -1,6 +1,7 @@
 ﻿using EasyConnect.Managers;
 using EasyConnect.Models;
 using System.Text.Json;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Services
 {
@@ -38,7 +39,7 @@ namespace EasyConnect.Services
 
         public async Task GenerateNetworkingConfigurationJson(IProgress<ProgressStatus<Stages>> progress)
         {
-            await ProgressStatusService.Step(
+            await ProgressStatus.Step(
                 progress,
                 0,
                 100,
@@ -52,8 +53,8 @@ namespace EasyConnect.Services
                     {
                         var config = new
                         {
-                            DeviceId = item.Value.DeviceId.ToString(),
-                            DisplayName = item.Value.DeviceId.ToString(),
+                            DeviceId = item.DeviceId.ToString(),
+                            DisplayName = item.DeviceId.ToString(),
                             IsAdmin = "false",
                             Port = "7777",
                             Ip = ExperienceServerIp,
@@ -62,7 +63,7 @@ namespace EasyConnect.Services
                             HttpPort = 9090
                         };
                         string json = JsonSerializer.Serialize(config);
-                        await _networkService.SaveLocalFile(json, "CONFIGS", $"{item.Value.SerialNumber}.json");
+                        await _networkService.SaveLocalFile(json, "CONFIGS", $"{item.SerialNumber}.json");
                     }
                     await _networkService.GenerateManifest();
                     return new DeviceCommandResult

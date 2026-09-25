@@ -4,8 +4,7 @@ using EasyConnect.Models;
 using EasyConnect.Services;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Managers
 {
@@ -14,7 +13,7 @@ namespace EasyConnect.Managers
         WebSocketService websocket,
         AdbService adb,
         HttpController http,
-        DeviceManager deviceManager) : INotifyPropertyChanged
+        DeviceManager deviceManager)
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -46,7 +45,6 @@ namespace EasyConnect.Managers
                     lock (_lock)
                     {
                         _inAction = value;
-                        OnPropertyChanged(nameof(InAction));
                     }
                 }
             }
@@ -62,7 +60,6 @@ namespace EasyConnect.Managers
                     lock (_lock)
                     {
                         _isClosing = value;
-                        OnPropertyChanged(nameof(IsClosing));
                     }
                 }
             }
@@ -104,19 +101,19 @@ namespace EasyConnect.Managers
                     IsCompleted = false
                 });
 
-                await ProgressStatusService.Step(progress, 10, 40, Stages.Start,
+                await ProgressStatus.Step(progress, 10, 40, Stages.Start,
                     "Starting ADB service",
                     "ADB service ready",
                     () => _adb.ResetAdb());
-                await ProgressStatusService.Step(progress, 40, 60, Stages.Start,
+                await ProgressStatus.Step(progress, 40, 60, Stages.Start,
                     "Starting Network service",
                     "Network service ready",
                     () => _network.StartServerNetwork());
-                await ProgressStatusService.Step(progress, 60, 80, Stages.Start,
+                await ProgressStatus.Step(progress, 60, 80, Stages.Start,
                     "Starting Websocket service",
                     "Websocket service ready",
                     () => _websocket.StartAsync());
-                await ProgressStatusService.Step(progress, 80, 100, Stages.Start,
+                await ProgressStatus.Step(progress, 80, 100, Stages.Start,
                     "Starting HTTP service",
                     "HTTP listener/Handler service ready",
                     () => _http.StartServerListener());
@@ -175,6 +172,7 @@ namespace EasyConnect.Managers
             {
                 Debug.WriteLine("CLOSING EVERYTHING!!");
                 await _websocket.Close();
+                await _http.ShutDownService();
                 //_websocket.server?.Dispose();
                 //await _adb.ResetAdb();
                 await _network.StopServerConnection();
@@ -183,10 +181,6 @@ namespace EasyConnect.Managers
             {
                 throw new Exception($"ERROR AL CERRAR!! ", ex);
             }
-        }
-        protected void OnPropertyChanged(string name)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
