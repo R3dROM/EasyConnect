@@ -1,7 +1,8 @@
-﻿using EasyConnect.Services;
-using EasyConnect.Models;
+﻿using EasyConnect.Models;
 using System.Text.Json;
 using EasyConnect.Managers;
+using EasyConnect.State;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect
 {
@@ -15,20 +16,20 @@ namespace EasyConnect
     {
 
         private readonly WINDOW _window;
-        private readonly NetworkService _networkService;
+        private readonly NetworkState _networkState;
         private readonly AppManager _appManager;
 
         private string startupPaths = string.Empty;
 
         public Initializer(
-            NetworkService _networkService,
+            NetworkState _networkState,
             AppManager _appManager,
             WINDOW _window
             )
         {
             InitializeComponent();
             this._window = _window;
-            this._networkService = _networkService;
+            this._networkState = _networkState;
             this._appManager = _appManager;
 
             _appManager.ListBoxLogs = listBoxStartingLogs;
@@ -79,7 +80,7 @@ namespace EasyConnect
         {
             try
             {
-                var progress = ProgressStatusService.ProgressUpdate<Stages>(progressBarInitializer, listBoxStartingLogs);
+                var progress = ProgressStatus.ProgressUpdate<Stages>(progressBarInitializer, listBoxStartingLogs);
 
                 if (_appManager._currentState == States.NotInitialized)
                 {
@@ -92,9 +93,9 @@ namespace EasyConnect
                         );
                     string json = JsonSerializer.Serialize(newPath, options);
                     await File.WriteAllTextAsync(startupPaths, json);
-                    _networkService.CaddyPath = caddyPath.Text;
+                    _networkState.CaddyPath = caddyPath.Text;
                     //_networkService.DeployPath = deployPath.Text;
-                    _networkService.ManifestScriptsPath = manifestPath.Text;
+                    _networkState.ManifestScriptsPath = manifestPath.Text;
 
                     await _appManager.StartAsync(progress);
                     progressBarInitializer.Value = 100;

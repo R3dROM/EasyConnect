@@ -10,10 +10,6 @@ namespace EasyConnect.Services
         public ConcurrentDictionary<long, (DeviceJobSession, Command)>? Sessions
         {
             get => _sessions;
-            private set
-            {
-
-            }
         }
 
         public bool Complete(IReport message)
@@ -34,12 +30,23 @@ namespace EasyConnect.Services
             _sessions.TryAdd( currentJobId, (session, command) );
             return currentJobId;
         }
-        public Task<DeviceJobResult> WaitForCompletion(long jobId)
+        public async Task<DeviceJobResult> WaitForCompletion(long jobId, CancellationToken? cancellationToken = null)
         {
             if (!_sessions.TryGetValue(jobId, out var session))
                 throw new InvalidOperationException($"Job {jobId} not found");
-
-            return session.Item1.Completion.Task;
+            try
+            {
+                if (cancellationToken != null)
+                    return await session.Item1.Completion.Task.WaitAsync((CancellationToken)cancellationToken);
+                else
+                    return await session.Item1.Completion.Task;
+            }
+            catch (OperationCanceledException)
+            {
+                _sessions.TryRemove(jobId, out _);
+                throw;
+            }
+        
         }
         private bool Finish(IReport message, int exitCode)
         {

@@ -4,21 +4,51 @@ using System.Text.Json.Nodes;
 
 namespace EasyConnect.Models
 {
+    public enum NetworkChangeType
+    {
+        ServerIp,
+        Bundle,
+
+    }
+    public record NetworkChange(
+        NetworkChangeType type,
+        string toChange);
+    public enum DeviceChangeType
+    {
+        Added,
+        Removed,
+        Updated
+    }
+    public record DeviceChange(
+        DeviceChangeType type,
+        string id,
+        DeviceReport report
+        );
+
+    /// <summary>
+    /// /////////////////////////////////////////////////////
+    /// </summary>
+    public enum ActivityType
+    {
+        StartExperience,
+        UninstallExperience
+    }
     public enum MessageType
     {
         Register,
         Deployment,
         Battery,
         Heartbeat,
-        StartExperience,
-        Acknowledge
+        Acknowledge,
+        Update
     }
     public enum DeviceStatus
     {
         Boot,
         Waiting,
         Online,
-        Offline
+        Offline,
+        Updating
     }
     public enum Stages
     { 
@@ -36,6 +66,13 @@ namespace EasyConnect.Models
         Complete,
         Cancel,
         Fail
+    }
+    public enum JobType
+    {
+        Deployment,
+        Connection,
+        Activity,
+        Cancellation
     }
     [Serializable]
     public class MessageInfo: IReport
@@ -80,13 +117,15 @@ namespace EasyConnect.Models
     {
         public string? Ip { get; set; }
         public string? SerialNumber { get; set; }
-        public string? DeviceNumber { get; set; }
+        public int? DeviceNumber { get; set; }
+        public string? PuiVersion { get; set; }
         public DeviceStatus? Status { get; set; }
     }
     [Serializable]
     public class Acknowledgeinformation
     {
-        public JobState? Status { get; set; }
+        public JobState Status { get; set; }
+        public JobType TypeOfJob { get; set; }
     }
     [Serializable]
     public class BatteryInformation
@@ -97,10 +136,6 @@ namespace EasyConnect.Models
     public class HeartbeatInformation
     {
         public int? DateTime { get; set; }
-    }
-    public interface IInformation
-    {
-
     }
     public interface IReport
     {
@@ -117,18 +152,21 @@ namespace EasyConnect.Models
     {
         Deployment,
         Websocket,
-        Activity
+        Activity,
+        Cancellation
     }
     public interface ICommand
     {
         public CommandType CommandType { get; set; }
         public JsonObject Extras { get; set; }
+        public JsonObject? Options { get; set; }
         public string ToJson(JsonSerializerOptions jsonSerializerOptions);
     }
     public class Command : ICommand
     {
         public CommandType CommandType { get; set; }
         public JsonObject Extras { get; set; } = [];
+        public JsonObject? Options { get; set; }
         public long Id { get; set; }
         public Command(CommandType target)
         {
@@ -137,6 +175,11 @@ namespace EasyConnect.Models
         public void PutExtra<T>(string key, T value)
         {
             Extras[key] = JsonSerializer.SerializeToNode(value);
+        }
+        public void PutOption<T>(string key, T value)
+        {
+            Options ??= [];
+            Options?[key] = JsonSerializer.SerializeToNode(value);
         }
         public string ToJson(JsonSerializerOptions jsonSerializerOptions)
         {

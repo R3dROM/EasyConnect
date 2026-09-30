@@ -52,7 +52,6 @@ namespace EasyConnect
             labelBUNDLE = new Label();
             listBoxLogs = new ListBox();
             groupBoxDEVICES = new GroupBox();
-            counter = new Label();
             dataGridView1 = new DataGridView();
             deviceManagerBindingSource = new BindingSource(components);
             deviceInfoBindingSource = new BindingSource(components);
@@ -219,33 +218,23 @@ namespace EasyConnect
             listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listBoxLogs.FormattingEnabled = true;
             listBoxLogs.HorizontalScrollbar = true;
-            listBoxLogs.Location = new Point(51, 541);
+            listBoxLogs.Location = new Point(51, 669);
             listBoxLogs.Margin = new Padding(3, 2, 3, 2);
             listBoxLogs.Name = "listBoxLogs";
-            listBoxLogs.Size = new Size(957, 180);
+            listBoxLogs.Size = new Size(957, 52);
             listBoxLogs.TabIndex = 6;
             // 
             // groupBoxDEVICES
             // 
-            groupBoxDEVICES.Controls.Add(counter);
             groupBoxDEVICES.Controls.Add(dataGridView1);
             groupBoxDEVICES.Location = new Point(44, 282);
             groupBoxDEVICES.Margin = new Padding(3, 2, 3, 2);
             groupBoxDEVICES.Name = "groupBoxDEVICES";
             groupBoxDEVICES.Padding = new Padding(3, 2, 3, 2);
-            groupBoxDEVICES.Size = new Size(971, 255);
+            groupBoxDEVICES.Size = new Size(971, 383);
             groupBoxDEVICES.TabIndex = 5;
             groupBoxDEVICES.TabStop = false;
             groupBoxDEVICES.Text = "DEVICES";
-            // 
-            // counter
-            // 
-            counter.AutoSize = true;
-            counter.Location = new Point(86, 0);
-            counter.Name = "counter";
-            counter.Size = new Size(14, 16);
-            counter.TabIndex = 23;
-            counter.Text = "0";
             // 
             // dataGridView1
             // 
@@ -274,7 +263,7 @@ namespace EasyConnect
             dataGridView1.GridColor = SystemColors.ActiveCaptionText;
             dataGridView1.Location = new Point(7, 22);
             dataGridView1.Margin = new Padding(4, 5, 4, 5);
-            dataGridView1.MaximumSize = new Size(1100, 225);
+            dataGridView1.MaximumSize = new Size(1100, 350);
             dataGridView1.MultiSelect = false;
             dataGridView1.Name = "dataGridView1";
             dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -293,7 +282,7 @@ namespace EasyConnect
             dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle5;
             dataGridView1.RowTemplate.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.Size = new Size(957, 225);
+            dataGridView1.Size = new Size(957, 350);
             dataGridView1.TabIndex = 1;
             // 
             // deviceManagerBindingSource
@@ -373,7 +362,6 @@ namespace EasyConnect
             groupBoxSERVER.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownDEVICESDEPLOYMENT).EndInit();
             groupBoxDEVICES.ResumeLayout(false);
-            groupBoxDEVICES.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ((System.ComponentModel.ISupportInitialize)deviceManagerBindingSource).EndInit();
             ((System.ComponentModel.ISupportInitialize)deviceInfoBindingSource).EndInit();
@@ -409,7 +397,6 @@ namespace EasyConnect
         private BindingSource deviceManagerBindingSource;
         private BindingSource deviceInfoBindingSource;
         private Button CANCEL;
-        private Label counter;
         private Button buttonDeployPath;
         private TextBox deployPath;
         private Label label3;

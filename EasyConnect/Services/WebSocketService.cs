@@ -1,37 +1,29 @@
-﻿using EasyConnect.Models;
+﻿using EasyConnect.Managers;
+using EasyConnect.Models;
+using EasyConnect.State;
 using Fleck;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Services
 {
     public class WebSocketService(
-        NetworkService _NetworkService,
-        WebSocketHandler _webSocketHandler)
+        NetworkState _NetworkState,
+        WebSocketManager _webSocketHandler)
     {
         public  WebSocketServer? server;
-        private readonly NetworkService networkService = _NetworkService;
-        private readonly WebSocketHandler webSocketHandler = _webSocketHandler;
+        private readonly NetworkState networkState = _NetworkState;
+        private readonly WebSocketManager webSocketHandler = _webSocketHandler;
         private string serverIp = "";
         private string webSocketPort = "";
-
-        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            Converters =
-            {
-                new JsonStringEnumConverter()
-            }
-        };
 
         public async Task<DeviceCommandResult> StartAsync()
         {
             try
             {
-                serverIp = networkService.ServerIp;
-                webSocketPort = networkService.WebSocketPort;
+                serverIp = networkState.MyIpAddress?.ToString() ?? "";
+                webSocketPort = networkState.WebSocketPort;
                 server = new WebSocketServer($"ws://{serverIp}:{webSocketPort}");
                 var webSocketResult = await StartWebSocketServer();
                 return webSocketResult;
@@ -64,8 +56,10 @@ namespace EasyConnect.Services
                         if (id == null)
                         {
                             ws.Close();
+                            Debug.WriteLine("NO ID");
                             return;
                         }
+                        Debug.WriteLine($"New device: {ws.ConnectionInfo.ClientIpAddress}");
                         await webSocketHandler.Connection(id, ws);
                     };
 

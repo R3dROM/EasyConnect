@@ -1,31 +1,23 @@
-﻿using EasyConnect.Managers;
-using EasyConnect.Models;
+﻿using EasyConnect.Models;
 using EasyConnect.Services;
+using EasyConnect.State;
+using Makaretu.Dns;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace EasyConnect.Controllers
 {
     public class HttpController
-        (
-        NetworkService networkService,
-        DeviceManager deviceManager
-        )
+        (NetworkState networkState)
     {
-        private readonly NetworkService _NetworkServices = networkService;
-        private readonly DeviceManager _DeviceManager = deviceManager;
-        private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new JsonStringEnumConverter()
-            }
-        };
+        private readonly NetworkState _NetworkState = networkState;
+        private ServiceDiscovery? sd;
+        private ServiceProfile serviceProfile = new(
+                "Easyconnect Server",
+                "_easyconnect._tcp",
+                8000
+                );
 
         private HttpListener? _HttpListener;
 
@@ -36,7 +28,7 @@ namespace EasyConnect.Controllers
                 _ = StartListener();
                 return new DeviceCommandResult
                 { 
-                    Ip = _NetworkServices.ServerIp,
+                    Ip = _NetworkState.MyIpAddress?.ToString() ?? "",
                     ExitCode = 0,
                     Output = "HTTP listener/Handler Service Ready"
                 };
@@ -45,7 +37,7 @@ namespace EasyConnect.Controllers
             {
                 return new DeviceCommandResult
                 {
-                    Ip = _NetworkServices.ServerIp,
+                    Ip = _NetworkState.MyIpAddress?.ToString() ?? "",
                     ExitCode = -1,
                     Output = "HTTP listener/Handler Service Fail"
                 };
@@ -53,8 +45,8 @@ namespace EasyConnect.Controllers
         }
         public async Task<Manifest?> GetManifestFromServer()
         {
-            var ipServer = _NetworkServices.ServerIp;
-            var portServer = _NetworkServices.ServerPort;
+            var ipServer = _NetworkState.MyIpAddress?.ToString() ?? "";
+            var portServer = _NetworkState.ServerPort;
             string url = $"http://{ipServer}:{portServer}/manifest.json";
 
             using HttpClient client = new();
@@ -82,8 +74,8 @@ namespace EasyConnect.Controllers
             using HttpClient client = new();
             try
             {
-                var ipServer = _NetworkServices.ServerIp;
-                var portServer = _NetworkServices.ServerPort;
+                var ipServer = _NetworkState.MyIpAddress?.ToString() ?? "";
+                var portServer = _NetworkState.ServerPort;
                 string url = $"http://{ipServer}:{portServer}/upload";
                 var dest = Path.Combine(url, path).Replace("\\", "/");
                 using var content = new StringContent(json, new System.Text.UTF8Encoding(false), "application/json");
@@ -185,32 +177,22 @@ namespace EasyConnect.Controllers
             //    context.Response.Close();
             //}
         }
-        public async Task sendUdpPacket()
+        public async Task InitializemDnsService()
         {
-            using var udpClient = new UdpClient();
-            udpClient.EnableBroadcast = true;
-            var json_raw = new
-            {
-                status = "Server Ready",
-                portWebSocket = _NetworkServices.WebSocketPort,
-                portDownloads = _NetworkServices.ServerPort,
-                ipServer = _NetworkServices.ServerIp
-            };
-            string json = JsonSerializer.Serialize(json_raw);
-            while (true)
-            {
-                try
-                {
-                    byte[] data = Encoding.ASCII.GetBytes(json);
-                    
-                    await udpClient.SendAsync(data, _NetworkServices.BroadcastIp, 11000);
-                }
-                catch (ObjectDisposedException)
-                {
-                    Console.WriteLine("UdpClient has been closed.");
-                }
-                await Task.Delay(5000);
-            }
+            Debug.WriteLine("ZEROCONF");
+
+            serviceProfile.AddProperty("ipAddress", _NetworkState.MyIpAddress?.ToString());
+            serviceProfile.AddProperty("downloadPort", _NetworkState.ServerPort);
+            serviceProfile.AddProperty("websocketPort", _NetworkState.WebSocketPort);
+            Debug.WriteLine($"ipAddress: {_NetworkState.MyIpAddress?.ToString()}");
+            sd = new ServiceDiscovery();
+
+            sd.Advertise(serviceProfile);
+        }
+        public async Task ShutDownService()
+        {
+            sd?.Unadvertise(serviceProfile);
+            sd?.Dispose();
         }
     }
 }
