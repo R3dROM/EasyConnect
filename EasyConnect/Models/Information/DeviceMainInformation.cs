@@ -1,11 +1,15 @@
-﻿using System.ComponentModel;
+﻿using EasyConnect.Models.Communication.Message;
+using EasyConnect.Models.Communication.Reports;
+using EasyConnect.Models.Jobs;
+using EasyConnect.Models.Status;
+using System.ComponentModel;
 using static EasyConnect.Utilities.Utilities;
 
-namespace EasyConnect.Models
+namespace EasyConnect.Models.Information
 {
-    public class DeviceReport: INotifyPropertyChanged
+    public class DeviceMainInformation: INotifyPropertyChanged
     {
-        public DeviceReport(string? serialNumber = null)
+        public DeviceMainInformation(string? serialNumber = null)
         {
             if (serialNumber != null)
                 SerialNumber = serialNumber;
@@ -56,8 +60,8 @@ namespace EasyConnect.Models
                 }
             }
         }
-        private string? _serialNumber;
-        public string? SerialNumber
+        private string _serialNumber = string.Empty;
+        public string SerialNumber
         {
             get => _serialNumber;
             set
@@ -68,7 +72,6 @@ namespace EasyConnect.Models
                 }
             }
         }
-
         public const int InvalidId = -1;
         private int? _deviceId = InvalidId;
         public int? DeviceId
@@ -191,7 +194,7 @@ namespace EasyConnect.Models
                 }
             }
         }
-        CancellationTokenSource _timerCts = new CancellationTokenSource();
+        CancellationTokenSource _timerCts = new();
 
         public void UpdateDeploy(IReport info)
         {
@@ -205,7 +208,7 @@ namespace EasyConnect.Models
         }
         public void UpdateJobStatus(IReport info)
         {
-            var payload = info.DecodePayload<Acknowledgeinformation>(_jsonSerializerOptions);
+            var payload = info.DecodePayload<AcknowledgeInformation>(_jsonSerializerOptions);
             if (payload == null)
                 return;
             JobStatus = payload.Status;
@@ -230,7 +233,7 @@ namespace EasyConnect.Models
                 return;
             Ip = payload.Ip ?? "";
             DeviceId = payload.DeviceNumber ?? InvalidId;
-            SerialNumber = payload.SerialNumber;
+            SerialNumber = payload.SerialNumber ?? "";
             Status = payload.Status;
             PUIVersion = payload.PuiVersion;
         }

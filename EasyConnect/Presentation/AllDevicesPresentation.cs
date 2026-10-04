@@ -1,42 +1,42 @@
-﻿using EasyConnect.Managers;
-using EasyConnect.Models;
+﻿using EasyConnect.Events;
+using EasyConnect.Managers;
+using EasyConnect.Models.Information;
+using EasyConnect.Services;
 using System.Collections;
 using System.ComponentModel;
 using System.Reflection;
 
 namespace EasyConnect.Presentation
 {
-    public class DevicePresentation(DeviceManager deviceManager)
+    public class AllDevicesPresentation(DeviceService _deviceService)
     {
-        private readonly DeviceManager _deviceManager = deviceManager;
-        private readonly SortableBindingList<DeviceInfo> _devicesBindingList = [];
-        public SortableBindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
+        private readonly SortableBindingList<DeviceMainPresentation> _devicesBindingList = [];
+        public SortableBindingList<DeviceMainPresentation> DevicesBindingList => _devicesBindingList;
         public class SortableBindingList<T> : BindingList<T>
         {
             private bool _isSorted;
             private ListSortDirection _sortDirection = ListSortDirection.Ascending;
-            private PropertyDescriptor _sortProperty;
+            private PropertyDescriptor? _sortProperty = null;
 
-            public SortableBindingList() : base(new List<T>()) { }
+            public SortableBindingList() : base([]) { }
 
-            public SortableBindingList(IEnumerable<T> enumerable) : base(new List<T>(enumerable)) { }
+            public SortableBindingList(IEnumerable<T> enumerable) : base([.. enumerable]) { }
 
             protected override bool SupportsSortingCore => true;
             protected override bool IsSortedCore => _isSorted;
             protected override ListSortDirection SortDirectionCore => _sortDirection;
-            protected override PropertyDescriptor SortPropertyCore => _sortProperty;
+            protected override PropertyDescriptor? SortPropertyCore => _sortProperty;
 
             protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
             {
-                var items = Items as List<T>;
-                if (items == null) return;
+                if (Items is not List<T> items) return;
 
-                PropertyInfo propInfo = typeof(T).GetProperty(prop.Name);
+                PropertyInfo? propInfo = typeof(T).GetProperty(prop.Name);
 
-                Comparison<T> comparer = (a, b) =>
+                int comparer(T a, T b)
                 {
-                    object valA = propInfo?.GetValue(a, null);
-                    object valB = propInfo?.GetValue(b, null);
+                    object? valA = propInfo?.GetValue(a, null);
+                    object? valB = propInfo?.GetValue(b, null);
 
                     int result;
                     if (valA == null && valB == null) result = 0;
@@ -48,7 +48,7 @@ namespace EasyConnect.Presentation
                         result = Comparer.Default.Compare(valA, valB);
 
                     return direction == ListSortDirection.Ascending ? result : -result;
-                };
+                }
 
                 items.Sort(comparer);
 
@@ -69,12 +69,12 @@ namespace EasyConnect.Presentation
 
             protected override int FindCore(PropertyDescriptor prop, object key)
             {
-                PropertyInfo propInfo = typeof(T).GetProperty(prop.Name);
+                PropertyInfo? propInfo = typeof(T).GetProperty(prop.Name);
                 if (propInfo == null) return -1;
 
                 for (int i = 0; i < Count; i++)
                 {
-                    object value = propInfo.GetValue(this[i], null);
+                    object? value = propInfo.GetValue(this[i], null);
                     if (value != null && value.Equals(key))
                         return i;
                 }
@@ -94,10 +94,10 @@ namespace EasyConnect.Presentation
         }
 
         private SynchronizationContext? _syncContext = null;
-        public Task StartDeviceManager(SynchronizationContext uiContext)
+        public Task StartDevicesPresentation(SynchronizationContext uiContext)
         {
             _syncContext = uiContext;
-            _deviceManager.DeviceChange.Subscribe(OnConsumer);
+            _deviceService.SubscribeConsumer(OnConsumer);
             _devicesBindingList.AllowEdit = false;
             return Task.CompletedTask;
         }
@@ -118,20 +118,20 @@ namespace EasyConnect.Presentation
                     break;
             }
         }
-        private void AddDevicePresentation(DeviceReport report)
+        private void AddDevicePresentation(DeviceMainInformation report)
         {
-            var id = report?.SerialNumber;
+            var id = report.SerialNumber;
             _syncContext?.Send(_ =>
             {
                 var deviceInfo = GetDeviceInfo(id);
                 if (deviceInfo == null)
                 {
-                    var newDevice = new DeviceInfo(id);
+                    var newDevice = new DeviceMainPresentation(id);
                     _devicesBindingList.Add(newDevice);
                 }
             }, null);
         }
-        private void UpdateDevicePresentation(DeviceReport report)
+        private void UpdateDevicePresentation(DeviceMainInformation report)
         {
             var id = report.SerialNumber;
             if (id == null) 
@@ -143,11 +143,11 @@ namespace EasyConnect.Presentation
                 deviceInfo?.UpdateFromReport(report);
             }, null);
         }
-        private DeviceInfo? GetDeviceInfo(string id)
+        private DeviceMainPresentation? GetDeviceInfo(string id)
         {
             return _devicesBindingList.FirstOrDefault(device => device.SerialNumber == id) ?? null;
         }
-        private bool RemoveDevicePresentation(DeviceReport report)
+        private bool RemoveDevicePresentation(DeviceMainInformation report)
         {
             var remove = false;
             _syncContext?.Send(_ => {
@@ -155,7 +155,8 @@ namespace EasyConnect.Presentation
                 var deviceInfo = GetDeviceInfo(id);
                 if (deviceInfo == null)
                     remove = false;
-                remove = _devicesBindingList.Remove(deviceInfo);
+                else
+                    remove = _devicesBindingList.Remove(deviceInfo);
             }, null);
             return remove == true;
         }

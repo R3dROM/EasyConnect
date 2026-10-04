@@ -1,4 +1,6 @@
-﻿using EasyConnect.Models;
+﻿using EasyConnect.Events;
+using EasyConnect.Models.Communication.Reports;
+using EasyConnect.Models.Information;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reactive.Subjects;
@@ -7,18 +9,19 @@ namespace EasyConnect.Managers
 {
     public class DeviceManager
     {
-        private readonly ConcurrentDictionary<string, DeviceReport> _devicesDictionary = new();
-        public IReadOnlyCollection<DeviceReport> DevicesDictionary => (IReadOnlyCollection<DeviceReport>)_devicesDictionary.Values;
+        private readonly ConcurrentDictionary<string, DeviceMainInformation> _devicesDictionary = new();
+        public IReadOnlyCollection<DeviceMainInformation> DevicesDictionary 
+            => (IReadOnlyCollection<DeviceMainInformation>)_devicesDictionary.Values;
 
         private readonly Subject<DeviceChange> _deviceChange = new();
         public IObservable<DeviceChange> DeviceChange
         => _deviceChange;
 
-        public void UpdateDevice(IReport payload, string id, Action<IReport, DeviceReport> action)
+        public void TryUpdate(IReport payload, string id, Action<IReport, DeviceMainInformation> action)
         {
             try
             {
-                if (!GetReport(id, out var existing) || existing == null)
+                if (!TryGet(id, out var existing) || existing == null)
                     throw new Exception($"Report of {id} not found");
 
                 action(payload, existing);
@@ -34,12 +37,12 @@ namespace EasyConnect.Managers
                 throw;
             }
         }
-        public bool AddDevice(IReport register)
+        public bool TryAdd(IReport register)
         {
             var id = register.Id;
             if (id == null) 
                 return false;
-            var device = new DeviceReport(id);
+            var device = new DeviceMainInformation(id);
             var isNew = _devicesDictionary.TryAdd(id, device);
             if (isNew)
             {
@@ -50,54 +53,35 @@ namespace EasyConnect.Managers
 
                 device.PropertyChanged += OnDeviceReportChanged;
                 
-                UpdateDevice(
+                TryUpdate(
                     register,
                     id,
                     (data, device) => device.UpdateRegister(data));
             }
             return isNew;
         }
-        private void OnDeviceReportChanged(
-        object? sender,
-        PropertyChangedEventArgs e)
+        public bool TryRemove(string id, out DeviceMainInformation? device)
         {
-            if (sender is not DeviceReport report)
-                return;
-
-            switch (e.PropertyName)
+            if (!TryGet(id, out var existing) || existing == null)
             {
-                case nameof(DeviceReport.Status):
-                    PublishUpdated(report);
-                    break;
-            }
-        }
-        private void PublishUpdated(DeviceReport report)
-        {
-            _deviceChange.OnNext(
-                new DeviceChange(
-                    DeviceChangeType.Updated,
-                    report.SerialNumber,
-                    report));
-        }
-        public bool RemoveDevice(string id)
-        {
-            if (!GetReport(id, out var existing) || existing == null)
+                device = null;
                 return false;
+            }
 
             _deviceChange.OnNext(new DeviceChange(
                 DeviceChangeType.Removed,
                 id,
                 existing));
-
-            return _devicesDictionary.TryRemove(id, out _);
+            _devicesDictionary.TryRemove(id, out device);
+            return true;
         }
-        public void RemoveAll()
+        public void TryRemoveAll()
         {
             try
             {
                 foreach (var device in _devicesDictionary.Values)
                 {
-                    RemoveDevice(device.Ip);
+                    TryRemove(device.SerialNumber, out _);
                 }
             }
             catch (Exception)
@@ -110,9 +94,32 @@ namespace EasyConnect.Managers
                 _devicesDictionary.Clear();
             }
         }
-        public bool GetReport(string id, out DeviceReport? result)
+        public bool TryGet(string id, out DeviceMainInformation? result)
         {
             return _devicesDictionary.TryGetValue(id, out result);
+        }
+        
+        private void OnDeviceReportChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+        {
+            if (sender is not DeviceMainInformation report)
+                return;
+
+            switch (e.PropertyName)
+            {
+                case nameof(DeviceMainInformation.Status):
+                    PublishUpdated(report);
+                    break;
+            }
+        }
+        private void PublishUpdated(DeviceMainInformation report)
+        {
+            _deviceChange.OnNext(
+                new DeviceChange(
+                    DeviceChangeType.Updated,
+                    report.SerialNumber,
+                    report));
         }
     }
 }

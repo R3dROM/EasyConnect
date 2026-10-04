@@ -1,6 +1,6 @@
 ﻿namespace EasyConnect
 {
-    partial class Initializer
+    partial class LauncherView
     {
         /// <summary>
         /// Required designer variable.
@@ -28,13 +28,13 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Initializer));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LauncherView));
             label2 = new Label();
             label4 = new Label();
             caddyPath = new TextBox();
             buttonCaddyPath = new Button();
             buttonManifestPath = new Button();
-            manifestPath = new TextBox();
+            scriptsPath = new TextBox();
             buttonContinue = new Button();
             progressBarInitializer = new ProgressBar();
             listBoxStartingLogs = new ListBox();
@@ -45,16 +45,16 @@
             label2.AutoSize = true;
             label2.Location = new Point(41, 80);
             label2.Name = "label2";
-            label2.Size = new Size(143, 20);
+            label2.Size = new Size(75, 15);
             label2.TabIndex = 1;
-            label2.Text = "Manifest script path:";
+            label2.Text = " Scripts path:";
             // 
             // label4
             // 
             label4.AutoSize = true;
             label4.Location = new Point(41, 47);
             label4.Name = "label4";
-            label4.Size = new Size(88, 20);
+            label4.Size = new Size(70, 15);
             label4.TabIndex = 3;
             label4.Text = "Caddy path:";
             // 
@@ -65,7 +65,7 @@
             caddyPath.Location = new Point(190, 41);
             caddyPath.Name = "caddyPath";
             caddyPath.ReadOnly = true;
-            caddyPath.Size = new Size(463, 27);
+            caddyPath.Size = new Size(463, 23);
             caddyPath.TabIndex = 4;
             // 
             // buttonCaddyPath
@@ -88,15 +88,15 @@
             buttonManifestPath.UseVisualStyleBackColor = true;
             buttonManifestPath.Click += buttonManifestPath_Click;
             // 
-            // manifestPath
+            // scriptsPath
             // 
-            manifestPath.BackColor = SystemColors.Window;
-            manifestPath.Font = new Font("Segoe UI", 9F);
-            manifestPath.Location = new Point(190, 74);
-            manifestPath.Name = "manifestPath";
-            manifestPath.ReadOnly = true;
-            manifestPath.Size = new Size(463, 27);
-            manifestPath.TabIndex = 8;
+            scriptsPath.BackColor = SystemColors.Window;
+            scriptsPath.Font = new Font("Segoe UI", 9F);
+            scriptsPath.Location = new Point(190, 74);
+            scriptsPath.Name = "scriptsPath";
+            scriptsPath.ReadOnly = true;
+            scriptsPath.Size = new Size(463, 23);
+            scriptsPath.TabIndex = 8;
             // 
             // buttonContinue
             // 
@@ -123,12 +123,12 @@
             listBoxStartingLogs.FormattingEnabled = true;
             listBoxStartingLogs.Location = new Point(38, 119);
             listBoxStartingLogs.Name = "listBoxStartingLogs";
-            listBoxStartingLogs.Size = new Size(716, 104);
+            listBoxStartingLogs.Size = new Size(716, 100);
             listBoxStartingLogs.TabIndex = 16;
             // 
-            // Initializer
+            // LauncherView
             // 
-            AutoScaleDimensions = new SizeF(120F, 120F);
+            AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoSize = true;
             ClientSize = new Size(800, 339);
@@ -136,7 +136,7 @@
             Controls.Add(progressBarInitializer);
             Controls.Add(buttonContinue);
             Controls.Add(buttonManifestPath);
-            Controls.Add(manifestPath);
+            Controls.Add(scriptsPath);
             Controls.Add(buttonCaddyPath);
             Controls.Add(caddyPath);
             Controls.Add(label4);
@@ -144,9 +144,9 @@
             Font = new Font("Yu Gothic UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
-            Name = "Initializer";
+            Name = "LauncherView";
             Text = "EASYLINK";
-            Load += Initializer_Load;
+            Load += LauncherView_Load;
             ResumeLayout(false);
             PerformLayout();
         }
@@ -157,7 +157,7 @@
         private TextBox caddyPath;
         private Button buttonCaddyPath;
         private Button buttonManifestPath;
-        private TextBox manifestPath;
+        private TextBox scriptsPath;
         private Button buttonContinue;
         private ProgressBar progressBarInitializer;
         private ListBox listBoxStartingLogs;

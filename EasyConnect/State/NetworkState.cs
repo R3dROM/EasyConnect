@@ -1,36 +1,41 @@
-﻿using EasyConnect.Models;
-using System.Net;
-using System.Reactive.Subjects;
+﻿using System.Net;
 
 namespace EasyConnect.State
 {
     public class NetworkState
     {
-        private readonly Subject<NetworkChange> _networkChange = new();
-        public IObservable<NetworkChange> NetworkChange
-        => _networkChange;
-
-        private Manifest? _manifest = null;
-        public Manifest? Manifest
+        private string _scriptsPaths = string.Empty;
+        public string ScriptsPath
         {
-            get => _manifest;
+            get => _scriptsPaths;
             set
             {
-                if (_manifest != value)
+                _scriptsPaths = value;
+                _manifestScriptPath = Path.Combine(_scriptsPaths, "generate-manifest.ps1");
+                _bundleScriptPath = Path.Combine(_scriptsPaths, "generate-bundleId.ps1");
+            }
+        }
+        private string _bundleScriptPath = string.Empty;
+        public string BundleScriptPath
+        {
+            get => _bundleScriptPath;
+            set
+            {
+                if (_bundleScriptPath != value)
                 {
-                    _manifest = value;
+                    _bundleScriptPath = value;
                 }
             }
         }
-        private string _manifestScriptsPath = string.Empty;
-        public string ManifestScriptsPath
+        private string _manifestScriptPath = string.Empty;
+        public string ManifestScriptPath
         {
-            get => _manifestScriptsPath;
+            get => _manifestScriptPath;
             set
             {
-                if (_manifestScriptsPath != value)
+                if (_manifestScriptPath != value)
                 {
-                    _manifestScriptsPath = value;
+                    _manifestScriptPath = value;
                 }
             }
         }
@@ -80,7 +85,6 @@ namespace EasyConnect.State
                 if (_myIpAddress != value)
                 {
                     _myIpAddress = value;
-                    _networkChange.OnNext(new NetworkChange(NetworkChangeType.ServerIp, MyIpAddress?.ToString() ?? ""));
                 }
             }
         }
@@ -129,21 +133,18 @@ namespace EasyConnect.State
                 if (value != _bundle)
                 {
                     _bundle = value;
-                    _networkChange.OnNext(new NetworkChange(NetworkChangeType.Bundle, Bundle));
                 }
             }
         }
-        private string _apkName = string.Empty;
-        public string ApkName
+        private string _experienceServerIp = string.Empty;
+        public string ExperienceServerIp
         {
-            get => _apkName;
+            get => _experienceServerIp;
             set
             {
-                if (value != _apkName)
+                if (_experienceServerIp != value)
                 {
-                    var tmp = value;
-                    tmp = tmp.Substring(4);
-                    _apkName = tmp;
+                    _experienceServerIp = value;
                 }
             }
         }

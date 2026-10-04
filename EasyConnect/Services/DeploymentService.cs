@@ -1,36 +1,169 @@
 ﻿using EasyConnect.Managers;
-using EasyConnect.Models;
+using EasyConnect.Models.Communication.Commands;
+using EasyConnect.Models.Communication.Message;
+using EasyConnect.Models.Information;
+using EasyConnect.Models.Jobs;
 using EasyConnect.State;
+using System.Diagnostics;
 using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Services
 {
     public class DeploymentService(
-        NetworkState _networkState, 
-        JobTrackerService jobTrackerService,
-        WebSocketManager webSocketService)
+        NetworkManager _networkManager,
+        JobTrackerService _jobTrackerService,
+        WebSocketService _webSocketService,
+        DeviceManager _deviceManager)
     {
-        private readonly WebSocketManager _websocketHandler = webSocketService;
-        private readonly NetworkState _networkState = _networkState;
-        private readonly JobTrackerService _jobTracker = jobTrackerService;
+        private CancellationTokenSource? cancellationTokenSource = new();
 
-        public async Task<DeviceJobResult> DeploymentAsync(DeviceReport device, CancellationToken cancellationToken)
+        internal async Task StartExperience(int maxDevices)
         {
-            var id = device.SerialNumber;
-            Command command = new(CommandType.Deployment);
-            command.PutExtra("url", $"http://{_networkState.MyIpAddress?.ToString() ?? ""}:{_networkState.ServerPort}/{_networkState.FolderBundle}");
-            command.PutExtra("bundle", _networkState.Bundle);
-            command.PutOption("clean", true);
-            var jobId = _jobTracker.Register(id!, command);
-            command.Id = jobId;
+            var snapshot = _deviceManager.DevicesDictionary;
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await StartActivityManager(d, ActivityType.StartExperience, cancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"EXCEPTION ON STARTING APP: {ex.Message}");
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
+        }
+        internal async Task StartUninstall(int maxDevices)
+        {
+            var snapshot = _deviceManager.DevicesDictionary;
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
+
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await StartActivityManager(d, ActivityType.UninstallExperience, cancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"EXCEPTION ON STARTING APP: {ex.Message}");
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
+        }
+        internal async Task StartDeployment(int maxDevices)
+        {
+            var snapshot = _deviceManager.DevicesDictionary;
+            var semaphore = new SemaphoreSlim(maxDevices);
+
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
+
             try
             {
-                var evt = await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device, cancellationToken);
+                var tasks = snapshot.Select(async d =>
+                {
+                    await semaphore.WaitAsync(cancellationTokenSource.Token);
+                    try
+                    {
+                        Debug.WriteLine("Start deploy Controller");
+                        await DeploymentAsync(d, cancellationTokenSource.Token);
+                        Debug.WriteLine("end deploy Controller");
+                    }
+                    catch (Exception)
+                    {
+
+                        throw;
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+                await Task.WhenAll(tasks);
+            }
+            finally
+            {
+                cancellationTokenSource?.Dispose();
+                cancellationTokenSource = null;
+            }
+        }
+        internal async Task StopDeployment()
+        {
+            cancellationTokenSource?.Cancel();
+            var snapshot = _deviceManager.DevicesDictionary;
+            var tasks = snapshot.Select(async d =>
+            {
+                try
+                {
+                    await CancellationJobAsync(d);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            });
+            await Task.WhenAll(tasks);
+        }
+        internal IReadOnlyCollection<DeviceMainInformation> GetDevicesToDeploy()
+            => _deviceManager.DevicesDictionary;
+
+        private async Task<DeviceJobResult> DeploymentAsync(DeviceMainInformation device, CancellationToken cancellationToken)
+        {
+            var id = device.SerialNumber;
+            if (id == null)
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Canceled deployment",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            Command command = new(JobType.Deployment);
+            command.PutExtra(
+                "url", 
+                $"http://{_networkManager.GetMyIpAddress()}" +
+                $":{_networkManager.GetServerPort()}/{_networkManager.GetFolderBundle()}");
+            command.PutExtra(
+                "bundle", 
+                _networkManager.GetBundle());
+            command.PutOption(
+                "clean", 
+                true);
+            if (_jobTrackerService.StartJob(id, ref command))
+                await _jobTrackerService.WaitForAcknowledge(command.Id, cancellationToken);
+            
+            //_jobTrackerManager.AddJob(id!, ref command);
+
+            try
+            {
+                var evt = await SendCommand(command.ToJson(_jsonSerializerOptions), command.Id, device, cancellationToken);
                 if (evt == null || evt.ExitCode != 0)
                 {
                     return new DeviceJobResult
                     {
-                        JobId = jobId,
+                        JobId = command.Id,
                         Output = "Invalid event",
                         ExitCode = -1,
                         DurationMs = evt?.DurationMs ?? 0
@@ -38,7 +171,7 @@ namespace EasyConnect.Services
                 }
                 return new DeviceJobResult
                 {
-                    JobId = jobId,
+                    JobId = command.Id,
                     Output = evt.Output,
                     ExitCode = evt.ExitCode,
                     DurationMs = evt.DurationMs
@@ -48,43 +181,61 @@ namespace EasyConnect.Services
             {
                 return new DeviceJobResult
                 {
-                    JobId = jobId,
+                    JobId = command.Id,
                     Output = "Canceled deployment",
                     ExitCode = 0,
                     DurationMs = 0
                 };
             }
         }
-        public async Task<DeviceJobResult>StopAsync(DeviceReport device)
+        private async Task<DeviceJobResult>CancellationJobAsync(DeviceMainInformation device)
         {
             var id = device.SerialNumber;
-            Command command = new(CommandType.Cancellation);
-            command.PutExtra("cancellation", true);
-            var jobId = _jobTracker.Register(id!, command);
-            command.Id = jobId;
+            if (id == null)
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Failure to Cancel",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            Command command = new(JobType.Cancellation);
+            command.PutExtra(
+                "cancellation", 
+                true);
+            if (_jobTrackerService.StartJob(id, ref command))
+                await _jobTrackerService.WaitForAcknowledge(command.Id);
 
-            return await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device);
+            return await SendCommand(command.ToJson(_jsonSerializerOptions), command.Id, device);
         }
-        public async Task<DeviceJobResult> StartActivityManager(DeviceReport device, ActivityType activityFlag, CancellationToken cancellationToken)
+        private async Task<DeviceJobResult> StartActivityManager(DeviceMainInformation device, ActivityType activityFlag, CancellationToken cancellationToken)
         {
             var id = device.SerialNumber;
-            Command command = new(CommandType.Activity);
-            command.PutExtra("bundle", _networkState.Bundle);
-            command.PutOption("type", activityFlag);
-            var jobId = _jobTracker.Register(id!, command);
-            command.Id = jobId;
+            if (id == null)
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Fail to start activity",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            Command command = new(JobType.Activity);
+            command.PutExtra(
+                "bundle", 
+                _networkManager.GetBundle());
+            command.PutOption(
+                "type", 
+                activityFlag);
+            if (_jobTrackerService.StartJob(id, ref command))
+                await _jobTrackerService.WaitForAcknowledge(command.Id);
 
-            return await SendCommand(command.ToJson(_jsonSerializerOptions), jobId, device, cancellationToken);
+            return await SendCommand(command.ToJson(_jsonSerializerOptions), command.Id, device, cancellationToken);
         }
-        private async Task<DeviceJobResult> SendCommand(string json, long jobId, DeviceReport device, CancellationToken? cancellationToken = null)
+        private async Task<DeviceJobResult> SendCommand(string json, long jobId, DeviceMainInformation device, CancellationToken? cancellationToken = null)
         {
-            await _websocketHandler.SendMessageToDevice(device, json);
-            var job = await _jobTracker.WaitForCompletion(jobId, cancellationToken);
+            await _webSocketService.SendMessageToDevice(device, json);
+            var job = await _jobTrackerService.WaitForCompletion(jobId, cancellationToken);
             return job;
-        }
-        public async Task ReSendCommand(string json, DeviceReport device)
-        {
-            await _websocketHandler.SendMessageToDevice(device, json);
         }
     }
 }

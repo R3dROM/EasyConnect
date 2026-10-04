@@ -1,10 +1,14 @@
-﻿using System.ComponentModel;
+﻿using EasyConnect.Models.Communication.Message;
+using EasyConnect.Models.Information;
+using EasyConnect.Models.Jobs;
+using EasyConnect.Models.Status;
+using System.ComponentModel;
 
-namespace EasyConnect.Models
+namespace EasyConnect.Presentation
 {
-    public class DeviceInfo : INotifyPropertyChanged
+    public class DeviceMainPresentation : INotifyPropertyChanged
     {
-        public DeviceInfo(string id)
+        public DeviceMainPresentation(string id)
         {
             SerialNumber = id;
         }
@@ -130,7 +134,7 @@ namespace EasyConnect.Models
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        public void UpdateFromReport(DeviceReport report)
+        public void UpdateFromReport(DeviceMainInformation report)
         {
             Ip = report.Ip;
             SerialNumber = report.SerialNumber;

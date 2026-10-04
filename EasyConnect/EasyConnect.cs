@@ -1,73 +1,41 @@
 ﻿using EasyConnect.Controllers;
-using EasyConnect.Legacy;
-using EasyConnect.Managers;
-using EasyConnect.Models;
+using EasyConnect.Handler;
 using EasyConnect.Presentation;
 using EasyConnect.Services;
-using System.ComponentModel;
-using System.Text.RegularExpressions;
-using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect
 {
-    public partial class WINDOW : Form
+    public partial class EasyLinkView : Form
     {
         private SynchronizationContext? _UiContext;
 
-        private readonly AppManager _AppManager;
-        private readonly DevicePresentation _DevicePresentation;
+        private readonly LauncherController _LauncherController;
+        private readonly AllDevicesPresentation _AllDevicePresentation;
         private readonly DeployController _DeployController;
-        private readonly DeploymentService _DeploymentService;
-        private readonly ConnectionService _ConnectionService;
-        private readonly WebSocketService _WebSocketService;
-        private readonly AdbService _AdbService;
         private readonly NetworkService _NetworkService;
         private readonly NetworkPresentation _NetworkPresentation;
-        private readonly NetworkConfigurationService _NetworkingConfigurationService;
-        private readonly HttpController _HttpController;
+        private readonly UiHandler _UiHandler;
 
-        private readonly DeviceManager _DeviceManager;
-
-        public WINDOW(
-            NetworkConfigurationService _NetworkingConfigurationService,
+        public EasyLinkView(
             NetworkService _NetworkService,
-            NetworkPresentation _NetworkState, 
-            WebSocketService _WebSocketService,
-            AdbService _AdbService, 
+            NetworkPresentation _NetworkPresentation,
             DeployController _DeployController,
-            InfoController _InfoController, 
-            HttpController _HttpController,
-            AppManager _AppManager, 
-            DeploymentService _DeploymentService,
-            ConnectionService _ConnectionService,
-            DeviceManager _DeviceManager,
-            DevicePresentation _DevicePresentation
+            LauncherController _LauncherController,
+            AllDevicesPresentation _AllDevicePresentation,
+            UiHandler _UiHandler
             )
         {
             InitializeComponent();
-            this._NetworkingConfigurationService = _NetworkingConfigurationService;
-            this._DeploymentService = _DeploymentService;
-            this._ConnectionService = _ConnectionService;
             this._NetworkService = _NetworkService;
-            this._WebSocketService = _WebSocketService;
-            this._AdbService = _AdbService;
             this._DeployController = _DeployController;
-            this._AppManager = _AppManager;
-            this._DeviceManager = _DeviceManager;
-            this._HttpController = _HttpController;
-            this._DevicePresentation = _DevicePresentation;
-            this._NetworkPresentation = _NetworkState;
+            this._LauncherController = _LauncherController;
+            this._AllDevicePresentation = _AllDevicePresentation;
+            this._NetworkPresentation = _NetworkPresentation;
+            this._UiHandler = _UiHandler;
 
-            _AppManager.PropertyChanged += InputUserHandler!;
+            this._DeployController.ActionStateChanged += SettButtonHandler;
         }
 
-        private async void InputUserHandler(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(_AppManager.InAction))
-            {
-                SettButtonHandler(!_AppManager.InAction);
-            }
-        }
         private void SettButtonHandler(bool enabled)
         {
             if (InvokeRequired)
@@ -97,15 +65,14 @@ namespace EasyConnect
             _UiContext = SynchronizationContext.Current;
             if (_UiContext != null)
             {
-                _AppManager.ListBoxLogs = listBoxLogs;
-                await _DevicePresentation.StartDeviceManager(_UiContext);
-                listBoxLogs.DrawItem += _AppManager.ListBoxLogs_DrawItem!;
+                _UiHandler.ListBoxLogs = listBoxLogs;
+                await _AllDevicePresentation.StartDevicesPresentation(_UiContext);
+                listBoxLogs.DrawItem += _UiHandler.ListBoxLogs_DrawItem!;
 
                 labelBUNDLE.DataBindings.Add("Text", _NetworkPresentation, nameof(_NetworkPresentation.Bundle), false, DataSourceUpdateMode.OnPropertyChanged);
                 labelIPDEVICE.DataBindings.Add("Text", _NetworkPresentation, nameof(_NetworkPresentation.ServerIp), false, DataSourceUpdateMode.OnPropertyChanged);
-                dataGridView1.DataSource = _DevicePresentation.DevicesBindingList;
-                dataGridView1.RowPostPaint += dataGridView1_RowPostPaint;
-                _ = _HttpController.InitializemDnsService();
+                dataGridView1.DataSource = _AllDevicePresentation.DevicesBindingList;
+                dataGridView1.RowPostPaint += dataGridView1_RowPostPaint!;
             }
         }
         private void dataGridView1_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
@@ -127,7 +94,7 @@ namespace EasyConnect
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (!_AppManager.IsClosing)
+            if (!_LauncherController.IsClosing)
             {
                 e.Cancel = true;
                 _ = CloseAsync();
@@ -142,9 +109,9 @@ namespace EasyConnect
         {
             try
             {
-                await _AppManager.CloseAsync();
+                await _LauncherController.CloseEasyLink();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
             }
@@ -160,115 +127,33 @@ namespace EasyConnect
             await _DeployController.StartUninstall(maxDevices);
         }
 
-        private void textBoxServerIp_TextChanged(object sender, EventArgs e)
+        private async void textBoxServerIp_TextChanged(object sender, EventArgs e)
         {
-            _NetworkingConfigurationService.ExperienceServerIp = textBoxServerIp.Text;
+            await _NetworkService.ConfigureDeploymentIp(textBoxServerIp.Text);
         }
 
         private async void buttonDeploy_Click(object sender, EventArgs e)
         {
-            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
-            await ActionAsync<Stages, int>(actionAsync: _DeployController.StartDeployment, value: maxDevices);
+            int maxDevices = (int)numericUpDownDEVICESDEPLOYMENT.Value;
+            await _DeployController.StartDeployment(maxDevices);
         }
 
         private async void CANCEL_Click(object sender, EventArgs e)
         {
-            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
-            await _DeployController.StopDeployment(maxDevices);
-            _AppManager.InAction = false;
+            await _DeployController.StopDeployment();
         }
-        private void buttonDeployPath_Click(object sender, EventArgs e)
+        private async void buttonDeployPath_Click(object sender, EventArgs e)
         {
-            var pattern = new Regex(@"(?:^|\\)([^\\]+)\\?$");
-            var match = pattern.Match("");
-            _AppManager.FolderBrowser(selectedPath =>
-            {
-                deployPath.Text = selectedPath;
-                match = pattern.Match(selectedPath!);
-                if (match.Success)
-                    _ = _NetworkService.GenerateManifest(match.Groups[1].Value, selectedPath!);
-            });
+            var selectedPath = _UiHandler.FolderBrowser();
+            if (selectedPath == null) return;
+
+            deployPath.Text = selectedPath;
+            await _NetworkService.ConfigureDeploymentPaths(selectedPath);
         }
         private async void buttonSTARTEXPERIENCE_Click(object sender, EventArgs e)
         {
-            int maxDevices = ((int)numericUpDownDEVICESDEPLOYMENT.Value);
+            int maxDevices = (int)numericUpDownDEVICESDEPLOYMENT.Value;
             await _DeployController.StartExperience(maxDevices);
-        }
-        private async Task ActionAsync<T>(Func<IProgress<ProgressStatus<T>>, Task> actionAsync)
-        {
-            if (_AppManager.InAction)
-                throw new InvalidOperationException("Another action is already running");
-            try
-            {
-                _AppManager.InAction = true;
-                var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
-                await actionAsync(progress);
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _AppManager.InAction = false;
-            }
-        }
-        private async Task Event<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
-        {
-            var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
-            await actionAsync(progress, value);
-        }
-        private async Task ActionAsync<T, S>(Func<IProgress<ProgressStatus<T>>, S, Task> actionAsync, S value)
-        {
-            if (_AppManager.InAction)
-                throw new InvalidOperationException("Another action is already running");
-            try
-            {
-                _AppManager.InAction = true;
-                await Event<T, S>(actionAsync, value);
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _AppManager.InAction = false;
-            }
-        }
-        private async Task<T> FunctionAsync<T>(Func<IProgress<ProgressStatus<T>>, Task<T>>? actionAsync = null, Func<Task<T>>? functionAsync = null)
-        {
-            if (InvokeRequired)
-            {
-                return await Invoke(
-                            new Func<Task<T>>(
-                                () => FunctionAsync(actionAsync, functionAsync)
-                            )
-                        );
-            }
-            if (_AppManager.InAction)
-                throw new InvalidOperationException("Another action is already running");
-            if (functionAsync == null && actionAsync == null)
-                throw new InvalidOperationException("No parameters");
-            try
-            {
-                _AppManager.InAction = true;
-                var progress = ProgressStatus.ProgressUpdate<T>(progressBar, listBoxLogs);
-                if (actionAsync != null)
-                    return await actionAsync(progress);
-                return await functionAsync();
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                _AppManager.InAction = false;
-            }
         }
     }
 }

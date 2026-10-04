@@ -1,8 +1,7 @@
-﻿using System.Diagnostics;
-
-namespace EasyConnect.Models
+﻿
+namespace EasyConnect.Models.Action
 {
-    public class DeviceCommandResult
+    public class ActionResult
     {
         public required string Ip { get; set; }
         public int ExitCode { get; set; }

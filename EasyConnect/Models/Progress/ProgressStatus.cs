@@ -1,12 +1,5 @@
-﻿namespace EasyConnect.Models
+﻿namespace EasyConnect.Models.Progress
 {
-    public enum ProgressStage
-    {
-        Waiting,
-        Connection,
-        Disconnection,
-        Starting
-    }
     public class ProgressStatus<T>
     {
         public int Percent { get; set; }

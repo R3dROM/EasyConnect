@@ -1,8 +1,9 @@
 ﻿using EasyConnect.Managers;
+using EasyConnect.Presentation;
 
 namespace EasyConnect
 {
-    partial class WINDOW
+    partial class EasyLinkView
     {
         /// <summary>
         /// Variable del diseñador necesaria.
@@ -36,7 +37,7 @@ namespace EasyConnect
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(WINDOW));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EasyLinkView));
             groupBoxSERVER = new GroupBox();
             buttonSTARTEXPERIENCE = new Button();
             CANCEL = new Button();
@@ -218,10 +219,10 @@ namespace EasyConnect
             listBoxLogs.Font = new Font("Microsoft Sans Serif", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             listBoxLogs.FormattingEnabled = true;
             listBoxLogs.HorizontalScrollbar = true;
-            listBoxLogs.Location = new Point(51, 669);
+            listBoxLogs.Location = new Point(51, 573);
             listBoxLogs.Margin = new Padding(3, 2, 3, 2);
             listBoxLogs.Name = "listBoxLogs";
-            listBoxLogs.Size = new Size(957, 52);
+            listBoxLogs.Size = new Size(435, 148);
             listBoxLogs.TabIndex = 6;
             // 
             // groupBoxDEVICES
@@ -231,7 +232,7 @@ namespace EasyConnect
             groupBoxDEVICES.Margin = new Padding(3, 2, 3, 2);
             groupBoxDEVICES.Name = "groupBoxDEVICES";
             groupBoxDEVICES.Padding = new Padding(3, 2, 3, 2);
-            groupBoxDEVICES.Size = new Size(971, 383);
+            groupBoxDEVICES.Size = new Size(971, 280);
             groupBoxDEVICES.TabIndex = 5;
             groupBoxDEVICES.TabStop = false;
             groupBoxDEVICES.Text = "DEVICES";
@@ -282,7 +283,7 @@ namespace EasyConnect
             dataGridView1.RowsDefaultCellStyle = dataGridViewCellStyle5;
             dataGridView1.RowTemplate.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.Size = new Size(957, 350);
+            dataGridView1.Size = new Size(957, 251);
             dataGridView1.TabIndex = 1;
             // 
             // deviceManagerBindingSource
@@ -291,7 +292,7 @@ namespace EasyConnect
             // 
             // deviceInfoBindingSource
             // 
-            deviceInfoBindingSource.DataSource = typeof(Models.DeviceInfo);
+            deviceInfoBindingSource.DataSource = typeof(DeviceMainPresentation);
             // 
             // progressBar
             // 

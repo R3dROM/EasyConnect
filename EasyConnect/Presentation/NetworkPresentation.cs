@@ -1,16 +1,14 @@
-﻿using EasyConnect.Models;
-using EasyConnect.State;
+﻿using EasyConnect.Events;
+using EasyConnect.Services;
 using System.ComponentModel;
 
 namespace EasyConnect.Presentation
 {
     public class NetworkPresentation: INotifyPropertyChanged
     {
-        private readonly NetworkState _networkState;
-        public NetworkPresentation(NetworkState networkState)
+        public NetworkPresentation(NetworkService _networkService)
         {
-            _networkState = networkState;
-            _networkState.NetworkChange.Subscribe(OnNetworkChange);
+            _networkService.SubscribeConsumer(OnNetworkChange);
         }
         private void OnNetworkChange(NetworkChange networkChange)
         {

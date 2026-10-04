@@ -1,4 +1,4 @@
-﻿namespace EasyConnect.Models
+﻿namespace EasyConnect.Models.Configurations
 {
     [Serializable]
     public class Manifest
