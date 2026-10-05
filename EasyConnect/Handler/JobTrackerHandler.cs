@@ -10,7 +10,7 @@ namespace EasyConnect.Handler
     {
         public void HandleAcknowledge(IReport info)
         {
-            var payload = info.DecodePayload<AcknowledgeInformation>(_jsonSerializerOptions);
+            var payload = info.DecodePayload<JobsInformation>(_jsonSerializerOptions);
             if (payload == null)
                 return;
 

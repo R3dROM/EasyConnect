@@ -8,7 +8,7 @@ namespace EasyConnect.Models.Communication.Message
     {
         Register,
         Deployment,
-        Battery,
+        Hardware,
         Heartbeat,
         Acknowledge,
         Update

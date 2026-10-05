@@ -1,46 +1,28 @@
 ﻿using EasyConnect.Managers;
-using EasyConnect.Models;
-using EasyConnect.Models.Action;
 using EasyConnect.Models.Communication.Commands;
-using EasyConnect.Models.Communication.Reports;
+using EasyConnect.Models.Communication.Message;
 using EasyConnect.Models.Information;
+using EasyConnect.State;
 using System.Diagnostics;
 
 namespace EasyConnect.Services
 {
     public class ConnectionService(
-        DeviceManager _deviceManager, 
+        DeviceService _deviceService, 
         JobTrackerManager _jobTrackerManager)
     {
-        public async Task OnReset()
+        public async Task OnMessage(MessageInfo report)
         {
-            _deviceManager.TryRemoveAll();
+            _deviceService.Update(report);
             await Task.CompletedTask;
         }
-        public async Task OnMessage(IReport report)
+        public async Task<(Device, Command)?> OnReconnected(string id)
         {
-            _deviceManager.TryUpdate(
-                    report,
-                    report.Id,
-                    (data, device) => device.OnMessage(data));
-            await Task.CompletedTask;
-        }
-        public async Task OnConnect(IReport report)
-        {
-            _deviceManager.TryAdd(report);
-            await Task.CompletedTask;
-        }
-        public async Task OnDisconnected()
-        {
-
-        }
-        public async Task<(DeviceMainInformation, Command)?> OnReconnected(string id)
-        {
-            if (_deviceManager.TryGet(id, out var device) && device != null)
+            if (_deviceService.Get(id, out var device) && device != null)
             {
                 Debug.WriteLine($"Report: {device}");
                if(_jobTrackerManager.Sessions != null &&
-                    _jobTrackerManager.Sessions.TryGetValue(device.LastJobId, out var result))
+                    _jobTrackerManager.Sessions.TryGetValue(device.JobsInformation.LastJobId, out var result))
                {
                     Debug.WriteLine($"session job: {result}");
                     if (!result.Completion.Task.IsCompletedSuccessfully)
@@ -52,9 +34,9 @@ namespace EasyConnect.Services
             }
             return null;
         }
-        public async Task<IReadOnlyCollection<DeviceMainInformation>> GetAllDevices()
+        public async Task<IReadOnlyCollection<Device>> GetAllDevices()
         {
-            return _deviceManager.DevicesDictionary;
+            return _deviceService.GetOnline();
         }
     }
 }

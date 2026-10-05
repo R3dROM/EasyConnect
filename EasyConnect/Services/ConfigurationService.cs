@@ -2,6 +2,7 @@
 using EasyConnect.Models.Action;
 using EasyConnect.Models.Configurations;
 using EasyConnect.Models.Information;
+using EasyConnect.State;
 using System.Diagnostics;
 using System.Text.Json;
 using static EasyConnect.Utilities.Utilities;
@@ -56,14 +57,14 @@ namespace EasyConnect.Services
             }
         }
         internal async Task<ActionResult> GenerateNetworkingConfigurationJson(
-            IReadOnlyCollection<DeviceMainInformation> snapshot)
+            IReadOnlyCollection<Device> snapshot)
         {
             foreach (var item in snapshot)
             {
                 var config = new
                 {
-                    DeviceId = item.DeviceId.ToString(),
-                    DisplayName = item.DeviceId.ToString(),
+                    DeviceId = item.GeneralInformation.DeviceNumber.ToString(),
+                    DisplayName = item.GeneralInformation.DeviceNumber.ToString(),
                     IsAdmin = "false",
                     Port = "7777",
                     Ip = _networkManager.GetExperienceManagerIp(),
@@ -72,7 +73,7 @@ namespace EasyConnect.Services
                     HttpPort = 9090
                 };
                 string json = JsonSerializer.Serialize(config);
-                await SaveLocalFile(json, "CONFIGS", $"{item.SerialNumber}.json");
+                await SaveLocalFile(json, "CONFIGS", $"{item.GeneralInformation.Id}.json");
             }
             await GenerateManifest();
             return new ActionResult

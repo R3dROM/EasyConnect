@@ -16,7 +16,32 @@ namespace EasyConnect.Services
         DeviceManager _deviceManager)
     {
         private CancellationTokenSource? cancellationTokenSource = new();
+        private async Task ExecuteAction(int maxDevices, Func<Device, Task> action)
+        {
+            var snapshot = _deviceManager.DevicesDictionary;
+            var semaphore = new SemaphoreSlim(maxDevices);
 
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new();
+            var tasks = snapshot.Select(async d =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await action(d);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"EXCEPTION ON STARTING APP: {ex.Message}");
+                    throw;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+            await Task.WhenAll(tasks);
+        }
         internal async Task StartExperience(int maxDevices)
         {
             var snapshot = _deviceManager.DevicesDictionary;
@@ -126,12 +151,10 @@ namespace EasyConnect.Services
             });
             await Task.WhenAll(tasks);
         }
-        internal IReadOnlyCollection<DeviceMainInformation> GetDevicesToDeploy()
-            => _deviceManager.DevicesDictionary;
 
-        private async Task<DeviceJobResult> DeploymentAsync(DeviceMainInformation device, CancellationToken cancellationToken)
+        private async Task<DeviceJobResult> DeploymentAsync(Device device, CancellationToken cancellationToken)
         {
-            var id = device.SerialNumber;
+            var id = device.GeneralInformation.Id;
             if (id == null)
                 return new DeviceJobResult
                 {
@@ -151,9 +174,16 @@ namespace EasyConnect.Services
             command.PutOption(
                 "clean", 
                 true);
-            if (_jobTrackerService.StartJob(id, ref command))
-                await _jobTrackerService.WaitForAcknowledge(command.Id, cancellationToken);
-            
+            if (!_jobTrackerService.StartJob(id, ref command))
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Canceled deployment",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            //await _jobTrackerService.WaitForAcknowledge(command.Id, cancellationToken);
+
             //_jobTrackerManager.AddJob(id!, ref command);
 
             try
@@ -188,9 +218,9 @@ namespace EasyConnect.Services
                 };
             }
         }
-        private async Task<DeviceJobResult>CancellationJobAsync(DeviceMainInformation device)
+        private async Task<DeviceJobResult>CancellationJobAsync(Device device)
         {
-            var id = device.SerialNumber;
+            var id = device.GeneralInformation.Id;
             if (id == null)
                 return new DeviceJobResult
                 {
@@ -203,14 +233,21 @@ namespace EasyConnect.Services
             command.PutExtra(
                 "cancellation", 
                 true);
-            if (_jobTrackerService.StartJob(id, ref command))
-                await _jobTrackerService.WaitForAcknowledge(command.Id);
+            if (!_jobTrackerService.StartJob(id, ref command))
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Canceled deployment",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            //await _jobTrackerService.WaitForAcknowledge(command.Id);
 
             return await SendCommand(command.ToJson(_jsonSerializerOptions), command.Id, device);
         }
-        private async Task<DeviceJobResult> StartActivityManager(DeviceMainInformation device, ActivityType activityFlag, CancellationToken cancellationToken)
+        private async Task<DeviceJobResult> StartActivityManager(Device device, ActivityType activityFlag, CancellationToken cancellationToken)
         {
-            var id = device.SerialNumber;
+            var id = device.GeneralInformation.Id;
             if (id == null)
                 return new DeviceJobResult
                 {
@@ -226,14 +263,22 @@ namespace EasyConnect.Services
             command.PutOption(
                 "type", 
                 activityFlag);
-            if (_jobTrackerService.StartJob(id, ref command))
-                await _jobTrackerService.WaitForAcknowledge(command.Id);
+            if (!_jobTrackerService.StartJob(id, ref command))
+                return new DeviceJobResult
+                {
+                    JobId = -1,
+                    Output = "Canceled deployment",
+                    ExitCode = 0,
+                    DurationMs = 0
+                };
+            //await _jobTrackerService.WaitForAcknowledge(command.Id);
 
             return await SendCommand(command.ToJson(_jsonSerializerOptions), command.Id, device, cancellationToken);
         }
-        private async Task<DeviceJobResult> SendCommand(string json, long jobId, DeviceMainInformation device, CancellationToken? cancellationToken = null)
+        private async Task<DeviceJobResult> SendCommand(string json, long jobId, Device device, CancellationToken? cancellationToken = null)
         {
             await _webSocketService.SendMessageToDevice(device, json);
+            await _jobTrackerService.WaitForAcknowledge(jobId);
             var job = await _jobTrackerService.WaitForCompletion(jobId, cancellationToken);
             return job;
         }

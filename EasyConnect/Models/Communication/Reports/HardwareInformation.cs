@@ -2,8 +2,8 @@
 namespace EasyConnect.Models.Communication.Reports
 {
     [Serializable]
-    public class BatteryInformation
+    public class HardwareInformation
     {
-        public int? BatteryLvl { get; set; }
+        public int BatteryLvl { get; set; }
     }
 }

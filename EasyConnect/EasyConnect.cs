@@ -34,6 +34,8 @@ namespace EasyConnect
             this._UiHandler = _UiHandler;
 
             this._DeployController.ActionStateChanged += SettButtonHandler;
+
+            dataGridView1.AllowUserToAddRows = false;
         }
 
         private void SettButtonHandler(bool enabled)
@@ -43,7 +45,7 @@ namespace EasyConnect
                 Invoke(() => SettButtonHandler(enabled));
                 return;
             }
-            SettButtonEnabled(this.Controls, enabled);
+            SettButtonEnabled(this.Controls, !enabled);
         }
         private void SettButtonEnabled(Control.ControlCollection controllers, bool enabled)
         {

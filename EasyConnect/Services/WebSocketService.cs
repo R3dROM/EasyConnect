@@ -2,8 +2,8 @@
 using EasyConnect.Managers;
 using EasyConnect.Models.Action;
 using EasyConnect.Models.Communication.Message;
-using EasyConnect.Models.Communication.Reports;
 using EasyConnect.Models.Information;
+using EasyConnect.State;
 using Fleck;
 using System.Diagnostics;
 using System.Text.Json;
@@ -16,39 +16,35 @@ namespace EasyConnect.Services
         private  WebSocketServer? server;
         private string serverIp = "";
         private string webSocketPort = "";
-        private readonly NetworkManager _networkState;
+        private readonly NetworkManager _networkManager;
         private readonly WebSocketManager _webSocketManager;
         private readonly JobTrackerHandler _jobTrackerHandler;
         private readonly ConnectionService _connectionService;
-        public Dictionary<MessageType, Func<IReport, Task>> Handlers;
+        public Dictionary<MessageType, Func<MessageInfo, Task>> Handlers;
         public WebSocketService(
-        NetworkManager _networkState,
+        NetworkManager _networkManager,
         WebSocketManager _webSocketManager,
         JobTrackerHandler _jobTrackerHandler,
         ConnectionService _connectionService)
         {
             Handlers = new()
             {
-                [MessageType.Register] = RegisterHandler,
+                [MessageType.Register] = HandleMessage,
                 [MessageType.Deployment] = HandleMessage,
-                [MessageType.Battery] = HandleMessage,
+                [MessageType.Hardware] = HandleMessage,
                 [MessageType.Heartbeat] = HandleMessage,
                 [MessageType.Acknowledge] = HandleAcknowledge
             };
-            this._networkState = _networkState;
+            this._networkManager = _networkManager;
             this._webSocketManager = _webSocketManager;
             this._jobTrackerHandler = _jobTrackerHandler;
             this._connectionService = _connectionService;
         }
-        private async Task RegisterHandler(IReport info)
-        {
-            await _connectionService.OnConnect(info);
-        }
-        private async Task HandleMessage(IReport info)
+        private async Task HandleMessage(MessageInfo info)
         {
             await _connectionService.OnMessage(info);
         }
-        private async Task HandleAcknowledge(IReport info)
+        private async Task HandleAcknowledge(MessageInfo info)
         {
             await _connectionService.OnMessage(info);
 
@@ -59,8 +55,8 @@ namespace EasyConnect.Services
         {
             try
             {
-                serverIp = _networkState.GetMyIpAddress();
-                webSocketPort = _networkState.GetWebSocketPort();
+                serverIp = _networkManager.GetMyIpAddress();
+                webSocketPort = _networkManager.GetWebSocketPort();
                 server = new WebSocketServer($"ws://{serverIp}:{webSocketPort}");
                 var webSocketResult = await StartWebSocketServer();
                 return webSocketResult;
@@ -160,7 +156,7 @@ namespace EasyConnect.Services
         private async Task WebSocketReconnection(string id, IWebSocketConnection newSocket)
         {
             var deviceLock = _webSocketManager.GetDeviceLock(id);
-            (DeviceMainInformation device, string message)? pendingMessage = null;
+            (Device device, string message)? pendingMessage = null;
             await deviceLock.WaitAsync();
             try
             {
@@ -191,14 +187,14 @@ namespace EasyConnect.Services
                 await SendMessageToDevice(pendingMessage.Value.device, pendingMessage.Value.message);
             }
         }
-        public async Task<bool> SendMessageToDevice(DeviceMainInformation device, string message)
+        public async Task<bool> SendMessageToDevice(Device device, string message)
         {
-            var deviceLock = _webSocketManager.GetDeviceLock(device.SerialNumber);
+            var deviceLock = _webSocketManager.GetDeviceLock(device.GeneralInformation.Id);
 
             await deviceLock.WaitAsync();
             try
             {
-                if (!_webSocketManager.TryGet(device.SerialNumber, out var result) || result == null)
+                if (!_webSocketManager.TryGet(device.GeneralInformation.Id, out var result) || result == null)
                     return false;
                 try
                 {
@@ -215,7 +211,6 @@ namespace EasyConnect.Services
                 deviceLock.Release();
             }
         }
-
         public void Close()
         {
             _webSocketManager.CloseConnections();

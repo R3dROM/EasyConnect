@@ -24,11 +24,9 @@ namespace EasyConnect.Controllers
             if (InAction)
                 throw new InvalidOperationException(
                     "Another action is already running");
-
-            SetInAction(true);
-
             try
             {
+                SetInAction(true);
                 await action();
             }
             finally
@@ -36,17 +34,17 @@ namespace EasyConnect.Controllers
                 SetInAction(false);
             }
         }
-        public Task StartUninstall(int maxDevices)
+        public async Task StartUninstall(int maxDevices)
         {
-            return ExecuteAction(() => _deploymentService.StartUninstall(maxDevices));
+            await ExecuteAction(() => _deploymentService.StartUninstall(maxDevices));
         }
-        public Task StartExperience(int maxDevices)
+        public async Task StartExperience(int maxDevices)
         {
-            return ExecuteAction(() => _deploymentService.StartExperience(maxDevices));
+            await ExecuteAction(() => _deploymentService.StartExperience(maxDevices));
         }
-        public Task StartDeployment(int maxDevices)
+        public async Task StartDeployment(int maxDevices)
         {
-            return ExecuteAction(async() =>
+            await ExecuteAction(async() =>
             {
                 await _networkService.GenerateNetworkingConfigurationJson();
                 await _deploymentService.StartDeployment(maxDevices);

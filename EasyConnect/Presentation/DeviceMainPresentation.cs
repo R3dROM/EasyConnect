@@ -1,7 +1,7 @@
-﻿using EasyConnect.Models.Communication.Message;
-using EasyConnect.Models.Information;
+﻿using EasyConnect.Models.Information;
 using EasyConnect.Models.Jobs;
 using EasyConnect.Models.Status;
+using EasyConnect.State;
 using System.ComponentModel;
 
 namespace EasyConnect.Presentation
@@ -39,7 +39,7 @@ namespace EasyConnect.Presentation
             }
         }
         private int? deviceId;
-        public int? DeviceId
+        public int? DeviceNumber
         {
             get => deviceId;
             set
@@ -47,12 +47,12 @@ namespace EasyConnect.Presentation
                 if (deviceId != value && value != null)
                 {
                     deviceId = value;
-                    OnPropertyChanged(nameof(DeviceId));
+                    OnPropertyChanged(nameof(DeviceNumber));
                 }
             }
         }
         private string? _puiVersion = string.Empty;
-        public string? PuiVersion
+        public string? FirmwareVersion
         {
             get => _puiVersion;
             set
@@ -60,7 +60,7 @@ namespace EasyConnect.Presentation
                 if (_puiVersion != value)
                 {
                     _puiVersion = value;
-                    OnPropertyChanged(nameof(PuiVersion));
+                    OnPropertyChanged(nameof(FirmwareVersion));
                 }
             }
         }
@@ -134,22 +134,23 @@ namespace EasyConnect.Presentation
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        public void UpdateFromReport(DeviceMainInformation report)
+        public void UpdateFromReport(Device report)
         {
-            Ip = report.Ip;
-            SerialNumber = report.SerialNumber;
-            DeviceId = report.DeviceId;
-            Status = report.Status;
-            JobStatus = report.JobStatus;
-            TypeOfJob = report.TypeOfJob;
+            Ip = report.SpecificInformation.Ip;
+            SerialNumber = report.GeneralInformation.Id;
+            DeviceNumber = report.GeneralInformation.DeviceNumber;
+            Status = report.StatusInformation.Status;
+
+            JobStatus = report.JobsInformation.JobStatus;
+            TypeOfJob = report.JobsInformation.TypeOfJob;
             if (TypeOfJob != JobType.Deployment)
                 Logs = "";
             else
             {
-                Logs = $"{report.Percent} %";
+                Logs = $"{report.DeploymentInformation.Percent} %";
             }
-            Battery = report.Battery;
-            PuiVersion = report.PUIVersion;
+            Battery = report.HardwareInformation.Battery;
+            FirmwareVersion = report.HardwareInformation.FirmwareVersion;
         }
     }
 }

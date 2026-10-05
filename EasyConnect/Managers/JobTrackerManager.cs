@@ -1,5 +1,4 @@
 ﻿using EasyConnect.Models.Communication.Commands;
-using EasyConnect.Models.Communication.Message;
 using EasyConnect.Models.Communication.Reports;
 using EasyConnect.Models.Jobs;
 using System.Collections.Concurrent;
@@ -11,15 +10,6 @@ namespace EasyConnect.Managers
         private long _jobId = 1;
         private readonly ConcurrentDictionary<long, DeviceJobSession> _sessions = [];
         public ConcurrentDictionary<long, DeviceJobSession>? Sessions => _sessions;
-
-        public bool Complete(IReport message)
-            => Finish(message, 0);
-
-        public bool Cancel(IReport message)
-            => Finish(message, 1);
-
-        public bool Fail(IReport message)
-            => Finish(message, 2);
 
         public bool TryAdd(string deviceId, ref Command command)
         {
@@ -103,21 +93,6 @@ namespace EasyConnect.Managers
                 _sessions.TryRemove(jobId, out _);
                 throw;
             }
-        }
-        private bool Finish(IReport message, int exitCode)
-        {
-            if (!TryRemove(message, out var session) || session == null)
-                return false;
-            var jobId = message.JobId ?? -1;
-            var result = new DeviceJobResult
-            {
-                JobId = jobId,
-                ExitCode = exitCode,
-                Output = message.Type.ToString(),
-                DurationMs = message.Timestamp ?? 0L
-            };
-
-            return session.Completion.TrySetResult(result);
         }
     }
 }

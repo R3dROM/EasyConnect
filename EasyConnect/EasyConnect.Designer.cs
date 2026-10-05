@@ -222,7 +222,7 @@ namespace EasyConnect
             listBoxLogs.Location = new Point(51, 573);
             listBoxLogs.Margin = new Padding(3, 2, 3, 2);
             listBoxLogs.Name = "listBoxLogs";
-            listBoxLogs.Size = new Size(435, 148);
+            listBoxLogs.Size = new Size(957, 148);
             listBoxLogs.TabIndex = 6;
             // 
             // groupBoxDEVICES
@@ -335,7 +335,7 @@ namespace EasyConnect
             label3.TabIndex = 21;
             label3.Text = "DEPLOY PATH:";
             // 
-            // WINDOW
+            // EasyLinkView
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -356,7 +356,7 @@ namespace EasyConnect
             Font = new Font("Yu Gothic", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(3, 2, 3, 2);
-            Name = "WINDOW";
+            Name = "EasyLinkView";
             Text = "EASY LINK";
             Load += Form1_Load;
             groupBoxSERVER.ResumeLayout(false);

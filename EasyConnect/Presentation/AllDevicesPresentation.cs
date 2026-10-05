@@ -1,7 +1,8 @@
 ﻿using EasyConnect.Events;
-using EasyConnect.Managers;
 using EasyConnect.Models.Information;
+using EasyConnect.Models.Status;
 using EasyConnect.Services;
+using EasyConnect.State;
 using System.Collections;
 using System.ComponentModel;
 using System.Reflection;
@@ -10,8 +11,8 @@ namespace EasyConnect.Presentation
 {
     public class AllDevicesPresentation(DeviceService _deviceService)
     {
-        private readonly SortableBindingList<DeviceMainPresentation> _devicesBindingList = [];
-        public SortableBindingList<DeviceMainPresentation> DevicesBindingList => _devicesBindingList;
+        private readonly SortableBindingList<DeviceRow> _devicesBindingList = [];
+        public IReadOnlyCollection<DeviceRow> DevicesBindingList => _devicesBindingList;
         public class SortableBindingList<T> : BindingList<T>
         {
             private bool _isSorted;
@@ -96,6 +97,7 @@ namespace EasyConnect.Presentation
         private SynchronizationContext? _syncContext = null;
         public Task StartDevicesPresentation(SynchronizationContext uiContext)
         {
+            _devicesBindingList.Clear();
             _syncContext = uiContext;
             _deviceService.SubscribeConsumer(OnConsumer);
             _devicesBindingList.AllowEdit = false;
@@ -109,7 +111,7 @@ namespace EasyConnect.Presentation
                     AddDevicePresentation(report.report);
                     break;
                 case DeviceChangeType.Removed:
-                    RemoveDevicePresentation(report.report);
+                    RemoveDevicePresentation(report.report.GeneralInformation);
                     break;
                 case DeviceChangeType.Updated:
                     UpdateDevicePresentation(report.report);
@@ -118,47 +120,154 @@ namespace EasyConnect.Presentation
                     break;
             }
         }
-        private void AddDevicePresentation(DeviceMainInformation report)
+        private void AddDevicePresentation(Device report)
         {
-            var id = report.SerialNumber;
+            var id = report.GeneralInformation.Id;
             _syncContext?.Send(_ =>
             {
-                var deviceInfo = GetDeviceInfo(id);
+                var deviceInfo = GetDeviceRow(id);
                 if (deviceInfo == null)
                 {
-                    var newDevice = new DeviceMainPresentation(id);
+                    var newDevice = new DeviceRow(id);
                     _devicesBindingList.Add(newDevice);
                 }
             }, null);
         }
-        private void UpdateDevicePresentation(DeviceMainInformation report)
+        private void UpdateDevicePresentation(Device report)
         {
-            var id = report.SerialNumber;
+            var id = report.GeneralInformation.Id;
             if (id == null) 
                 return;
 
             _syncContext?.Send(_ =>
             {
-                var deviceInfo = GetDeviceInfo(id);
-                deviceInfo?.UpdateFromReport(report);
+                Refresh(report);
             }, null);
         }
-        private DeviceMainPresentation? GetDeviceInfo(string id)
+        private void Refresh(Device device)
+        {
+            var id = device.GeneralInformation.Id;
+            if (!_deviceService.Get(id, out var oldDevice) || oldDevice == null)
+                return;
+
+            var row = GetDeviceRow(id);
+
+            if (row == null)
+                return;
+
+            row.UpdateFrom(device);
+
+            _devicesBindingList.ResetItem(_devicesBindingList.IndexOf(row));
+        }
+        private DeviceRow? GetDeviceRow(string id)
         {
             return _devicesBindingList.FirstOrDefault(device => device.SerialNumber == id) ?? null;
         }
-        private bool RemoveDevicePresentation(DeviceMainInformation report)
+        private bool RemoveDevicePresentation(DeviceGeneralInformation report)
         {
             var remove = false;
             _syncContext?.Send(_ => {
-                var id = report.SerialNumber;
-                var deviceInfo = GetDeviceInfo(id);
+                var id = report.Id;
+                var deviceInfo = GetDeviceRow(id);
                 if (deviceInfo == null)
                     remove = false;
                 else
                     remove = _devicesBindingList.Remove(deviceInfo);
             }, null);
             return remove == true;
+        }
+    }
+
+    public class DeviceRow : INotifyPropertyChanged
+    {
+        public DeviceRow(string id)
+        {
+            SerialNumber = id;
+        }
+        public string Ip
+        {
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(Ip));
+            }
+        } = string.Empty;
+        public int DeviceNumber { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(DeviceNumber));
+            }
+        } = -1;
+        public string SerialNumber { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(SerialNumber));
+            }
+        } = string.Empty;
+        public string Version
+        {
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(Version));
+            }
+        } = string.Empty;
+        public bool IsOnline { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(IsOnline));
+            }
+        } = false;
+        public string Battery { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(Battery));
+            }
+        } = string.Empty;
+        public string Job { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(Job));
+            }
+        } = string.Empty;
+        public string DeployPercent { 
+            get;
+            set
+            {
+                field = value;
+                OnPropertyChanged(nameof(DeployPercent));
+            }
+        } = string.Empty;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        public void UpdateFrom(Device device)
+        {
+            DeviceNumber = device.GeneralInformation.DeviceNumber;
+            Ip = device.SpecificInformation.Ip;
+            SerialNumber = device.GeneralInformation.Id;
+            Version = device.HardwareInformation.FirmwareVersion;
+            IsOnline = device.StatusInformation.Status == DeviceStatus.Online;
+
+            Battery = $"{device.HardwareInformation.Battery}%";
+
+            Job = device.JobsInformation.JobStatus.ToString();
+
+            DeployPercent =
+                $"{device.DeploymentInformation.Percent}%";
         }
     }
 }

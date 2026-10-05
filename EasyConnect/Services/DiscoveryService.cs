@@ -4,9 +4,8 @@ using System.Diagnostics;
 
 namespace EasyConnect.Services
 {
-    public class DiscoveryService(NetworkManager _networkState)
+    public class DiscoveryService(NetworkManager _networkManager)
     {
-        private readonly NetworkManager _networkState = _networkState;
         private ServiceDiscovery? sd;
         private readonly ServiceProfile serviceProfile = new(
                 "Easyconnect Server",
@@ -20,10 +19,10 @@ namespace EasyConnect.Services
             {
                 Debug.WriteLine("ZEROCONF");
 
-                serviceProfile.AddProperty("ipAddress", _networkState.GetMyIpAddress());
-                serviceProfile.AddProperty("downloadPort", _networkState.GetServerPort());
-                serviceProfile.AddProperty("websocketPort", _networkState.GetWebSocketPort());
-                Debug.WriteLine($"ipAddress: {_networkState.GetMyIpAddress()}");
+                serviceProfile.AddProperty("ipAddress", _networkManager.GetMyIpAddress());
+                serviceProfile.AddProperty("downloadPort", _networkManager.GetServerPort());
+                serviceProfile.AddProperty("websocketPort", _networkManager.GetWebSocketPort());
+                Debug.WriteLine($"ipAddress: {_networkManager.GetMyIpAddress()}");
                 sd = new ServiceDiscovery();
 
                 sd.Advertise(serviceProfile);

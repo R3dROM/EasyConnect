@@ -1,19 +1,16 @@
-﻿
-using EasyConnect.Models.Communication.Message;
-using EasyConnect.Models.Jobs;
+﻿using EasyConnect.Models.Jobs;
 
 namespace EasyConnect.Models.Communication.Reports
 {
     [Serializable]
     public class DeploymentInformation
     {
-        public JobState? Status { get; set; }
-        public string? CurrentFile { get; set; }
-        public string? Bundle { get; set; }
-        public string? ApkName { get; set; }
-        public long? ApkSize { get; set; }
-        public long? Timestamp { get; set; }
-        public int? Percent { get; set; }
-        public int? DateTime { get; set; }
+        public required JobState Status { get; set; }
+        public required string CurrentFile { get; set; }
+        public required string Bundle { get; set; }
+        public required string ApkName { get; set; }
+        public required long ApkSize { get; set; }
+        public required long Timestamp { get; set; }
+        public required int Percent { get; set; }
     }
 }
