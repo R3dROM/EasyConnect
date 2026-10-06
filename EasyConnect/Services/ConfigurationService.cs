@@ -57,8 +57,10 @@ namespace EasyConnect.Services
             }
         }
         internal async Task<ActionResult> GenerateNetworkingConfigurationJson(
+            CancellationToken cancellationToken,
             IReadOnlyCollection<Device> snapshot)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (var item in snapshot)
             {
                 var config = new

@@ -90,7 +90,7 @@ namespace EasyConnect.Presentation
                 }
             }
         }
-        private JobType _typeOfJob = JobType.Connection;
+        private JobType _typeOfJob = JobType.NoJob;
         public JobType TypeOfJob
         {
             get => _typeOfJob;

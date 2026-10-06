@@ -2,7 +2,6 @@
 using EasyConnect.Managers;
 using EasyConnect.Models.Action;
 using EasyConnect.Models.Communication.Message;
-using EasyConnect.Models.Information;
 using EasyConnect.State;
 using Fleck;
 using System.Diagnostics;
@@ -81,7 +80,7 @@ namespace EasyConnect.Services
                     ws.OnOpen = async () =>
                     {
                         ws.ConnectionInfo.Headers.TryGetValue("key", out var value);
-                        if (value == null || value != "PICO")
+                        if (value == null || value != "AGENT")
                         {
                             ws.Close();
                             return;

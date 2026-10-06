@@ -4,7 +4,6 @@ using System.Diagnostics;
 namespace EasyConnect.Controllers
 {
     public class DeployController(
-        NetworkService _networkService,
         DeploymentService _deploymentService)
     {
         private bool _inAction = false;
@@ -46,7 +45,6 @@ namespace EasyConnect.Controllers
         {
             await ExecuteAction(async() =>
             {
-                await _networkService.GenerateNetworkingConfigurationJson();
                 await _deploymentService.StartDeployment(maxDevices);
             });
         }

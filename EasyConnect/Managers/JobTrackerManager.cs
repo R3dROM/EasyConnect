@@ -74,7 +74,10 @@ namespace EasyConnect.Managers
             catch (OperationCanceledException)
             {
                 _sessions.TryRemove(jobId, out _);
-                throw;
+                return new DeviceJobResult { JobId = jobId ,
+                    Output = "Cancellation accepted",
+                    ExitCode = 0
+                };
             }
         }
         internal async Task<DeviceJobResult> WaitForAcknowledge(long jobId, CancellationToken? cancellationToken = null)
@@ -91,7 +94,12 @@ namespace EasyConnect.Managers
             catch (OperationCanceledException)
             {
                 _sessions.TryRemove(jobId, out _);
-                throw;
+                return new DeviceJobResult
+                {
+                    JobId = jobId,
+                    Output = "Cancellation accepted",
+                    ExitCode = 0
+                };
             }
         }
     }

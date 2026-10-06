@@ -1,6 +1,4 @@
-﻿using EasyConnect.Managers;
-using EasyConnect.Models;
-using EasyConnect.Models.Communication.Message;
+﻿using EasyConnect.Models;
 using EasyConnect.Models.Progress;
 using EasyConnect.Models.Status;
 using EasyConnect.Services;

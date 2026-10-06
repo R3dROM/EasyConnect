@@ -1,6 +1,7 @@
 ﻿using EasyConnect.Events;
 using EasyConnect.Managers;
 using EasyConnect.Models.Action;
+using EasyConnect.State;
 using static EasyConnect.Utilities.Utilities;
 
 namespace EasyConnect.Services
@@ -49,10 +50,10 @@ namespace EasyConnect.Services
                 };
             }
         }
-        internal async Task<ActionResult> GenerateNetworkingConfigurationJson()
+        internal async Task<ActionResult> GenerateNetworkingConfigurationJson(CancellationToken cancellationToken, IReadOnlyCollection<Device> snapshot)
         {
-            var snapshot = _deviceManager.DevicesDictionary;
-            return await _configurationService.GenerateNetworkingConfigurationJson(snapshot);
+            cancellationToken.ThrowIfCancellationRequested();
+            return await _configurationService.GenerateNetworkingConfigurationJson(cancellationToken, snapshot);
         }
         internal async Task ConfigureDeploymentPaths(string path)
         {
