@@ -1,37 +1,19 @@
 ﻿using EasyConnect.Managers;
-using EasyConnect.Models;
+using EasyConnect.Models.Action;
 using EasyConnect.Services;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Text.RegularExpressions;
 
 namespace EasyConnect.Legacy
 {
-    public class AdbService
+    public class AdbService(DeviceManager _deviceManager, ConsoleService _consoleService)
     {
-        private readonly DeviceManager _deviceManager;
-        private readonly ConsoleService _consoleService;
 
-        //private readonly BindingList<DeviceInfo> _devicesBindingList = [];
-        //public BindingList<DeviceInfo> DevicesBindingList => _devicesBindingList;
-
-        private readonly JobTrackerService _jobTracker;
-
-        public AdbService(DeviceManager deviceManager, ConsoleService consoleService, JobTrackerService jobTracker)
-        {
-            //_devicesBindingList.AllowEdit = true;
-            _deviceManager = deviceManager;
-            _consoleService = consoleService;
-            _jobTracker = jobTracker;
-        }
-
-        public async Task<DeviceCommandResult> ResetAdb()
+        public async Task<ActionResult> ResetAdb()
         {
             try
             {
                 await _consoleService.RunCommandAsync("adb", "kill-server");
                 await _consoleService.RunCommandAsync("adb", "start-server");
-                return new DeviceCommandResult
+                return new ActionResult
                 { 
                     Ip = "127.0.0.1",
                     ExitCode = 0,
@@ -43,14 +25,14 @@ namespace EasyConnect.Legacy
                 throw;
             }
         }
-        public async Task<DeviceCommandResult> PairDevice(string arguments)
+        public async Task<ActionResult> PairDevice(string arguments)
         {
             try
             {
                 var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", $"{arguments}");
                 if (ExitCode != 0)
                 {
-                    return new DeviceCommandResult
+                    return new ActionResult
                     {
                         ExitCode = -1,
                         Ip = "",
@@ -59,14 +41,14 @@ namespace EasyConnect.Legacy
                 }
                 if (!ParseAdbPairingResult(Output))
                 {
-                    return new DeviceCommandResult
+                    return new ActionResult
                     {
                         ExitCode = -1,
                         Ip = "",
                         Output = "ERROR al emparejar el dispositivo " + Output
                     };
                 }
-                return new DeviceCommandResult
+                return new ActionResult
                 {
                     ExitCode = ExitCode,
                     Ip = "",
@@ -79,7 +61,7 @@ namespace EasyConnect.Legacy
                 throw;
             }
         }
-        public async Task<DeviceCommandResult> SerialNumberDevice(string ip)
+        public async Task<ActionResult> SerialNumberDevice(string ip)
         {
             try
             {
@@ -88,21 +70,21 @@ namespace EasyConnect.Legacy
                 {
                     throw new Exception("ERROR al obtener el serial number del dispositivo");
                 }
-                return new DeviceCommandResult
+                return new ActionResult
                 {
                     ExitCode = 0,
                     Ip = ip,
                     Output = OutputSerialNumber
                 };
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _deviceManager.RemoveDevice(ip);
+                _deviceManager.TryRemove(ip, out _);
                 await _consoleService.RunCommandAsync("adb", $"disconnect {ip}");
                 throw;
             }
         }
-        public async Task<DeviceCommandResult> ExecuteCommandOnDevice(string ip, string arguments)
+        public async Task<ActionResult> ExecuteCommandOnDevice(string ip, string arguments)
         {
             try
             {
@@ -113,7 +95,7 @@ namespace EasyConnect.Legacy
                     throw new Exception(message);
                 }
 
-                return new DeviceCommandResult
+                return new ActionResult
                 {
                     Ip = ip,
                     ExitCode = ExitCode,
@@ -122,7 +104,7 @@ namespace EasyConnect.Legacy
             }
             catch (Exception ex)
             {
-                return new DeviceCommandResult
+                return new ActionResult
                 {
                     Ip = ip,
                     ExitCode = -1,
@@ -130,22 +112,22 @@ namespace EasyConnect.Legacy
                 };
             }
         }
-        public async Task<DeviceCommandResult> AdbDisconnectDevice(string ip, string port)
+        public async Task<ActionResult> AdbDisconnectDevice(string ip, string port)
         {
             try
             {
                 var args = $"disconnect {ip}:{port}";
-                var command = await _consoleService.RunCommandAsync("adb", args);
-                return new DeviceCommandResult
+                var (ExitCode, Output) = await _consoleService.RunCommandAsync("adb", args);
+                return new ActionResult
                 {
                     Ip = ip,
-                    ExitCode = command.ExitCode,
-                    Output = command.Output
+                    ExitCode = ExitCode,
+                    Output = Output
                 };
             }
             catch (Exception ex)
             {
-                return new DeviceCommandResult
+                return new ActionResult
                 {
                     Ip = ip,
                     ExitCode = -1,
@@ -153,17 +135,8 @@ namespace EasyConnect.Legacy
                 };
             }
         }
-        
-        
-        private bool ParseAdbConnectResult(string output)
-        {
-            if (output.Contains("connected to", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            if (output.Contains("unable to connect", StringComparison.CurrentCultureIgnoreCase) || string.IsNullOrEmpty(output) || output.Contains("failure", StringComparison.CurrentCultureIgnoreCase))
-                return false;
-            return false;
-        }
-        private bool ParseAdbPairingResult(string output)
+
+        private static bool ParseAdbPairingResult(string output)
         {
             if (output.Contains("paired to", StringComparison.CurrentCultureIgnoreCase))
                 return true;

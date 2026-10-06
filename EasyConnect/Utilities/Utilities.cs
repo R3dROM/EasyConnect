@@ -1,5 +1,8 @@
-﻿using EasyConnect.Models;
+﻿using EasyConnect.Models.Action;
+using EasyConnect.Models.Progress;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -7,9 +10,7 @@ namespace EasyConnect.Utilities
 {
     public sealed class Utilities
     {
-        private static readonly Utilities _instance = new();
-        public static Utilities Instance => _instance;
-        public static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        internal static readonly JsonSerializerOptions _jsonSerializerOptions = new()
         {
 
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -19,6 +20,19 @@ namespace EasyConnect.Utilities
                 new JsonStringEnumConverter()
             }
         };
+        internal static IPAddress[] GetMyIpAddress()
+        {
+            try
+            {
+                var currentIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                return [.. currentIPs.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)];
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                throw;
+            }
+        }
         public class ProgressStatus
         {
             public static async Task MessageStatus<T>(
@@ -64,14 +78,14 @@ namespace EasyConnect.Utilities
                     throw;
                 }
             }
-            public static async Task<DeviceCommandResult> Step<T>(
+            public static async Task<ActionResult> Step<T>(
                 IProgress<ProgressStatus<T>> progress,
                 int startPercent,
                 int endPercent,
                 T stage,
                 string startMsg,
                 string endMsg,
-                Func<Task<DeviceCommandResult>> action)
+                Func<Task<ActionResult>> action)
             {
                 try
                 {
@@ -105,7 +119,7 @@ namespace EasyConnect.Utilities
                 catch (Exception e)
                 {
                     Debug.WriteLine(e);
-                    return new DeviceCommandResult
+                    return new ActionResult
                     {
                         Ip = "",
                         Output = e.Message,

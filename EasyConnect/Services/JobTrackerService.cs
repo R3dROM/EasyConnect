@@ -1,17 +1,13 @@
-﻿using EasyConnect.Models;
-using System.Collections.Concurrent;
+﻿using EasyConnect.Managers;
+using EasyConnect.Models;
+using EasyConnect.Models.Communication.Commands;
+using EasyConnect.Models.Communication.Reports;
+using EasyConnect.Models.Jobs;
 
 namespace EasyConnect.Services
 {
-    public class JobTrackerService
+    public class JobTrackerService(JobTrackerManager _jobTrackerManager)
     {
-        private long _jobId = 1;
-        private readonly ConcurrentDictionary<long, (DeviceJobSession, Command)> _sessions = [];
-        public ConcurrentDictionary<long, (DeviceJobSession, Command)>? Sessions
-        {
-            get => _sessions;
-        }
-
         public bool Complete(IReport message)
             => Finish(message, 0);
 
@@ -20,44 +16,26 @@ namespace EasyConnect.Services
 
         public bool Fail(IReport message)
             => Finish(message, 2);
+        public bool Acknowledge(IReport message)
+            => Receive(message);
 
-        public long Register(string deviceId, Command command)
+        internal bool StartJob(string deviceId, ref Command command)
         {
-            long currentJobId = Interlocked.Increment(ref _jobId);
-            var session = new DeviceJobSession(
-                currentJobId,
-                deviceId);
-            _sessions.TryAdd( currentJobId, (session, command) );
-            return currentJobId;
+            return _jobTrackerManager.TryAdd(deviceId, ref command);
         }
-        public async Task<DeviceJobResult> WaitForCompletion(long jobId, CancellationToken? cancellationToken = null)
+        internal async Task WaitForAcknowledge(long jobId, CancellationToken? cancellationToken = null)
         {
-            if (!_sessions.TryGetValue(jobId, out var session))
-                throw new InvalidOperationException($"Job {jobId} not found");
-            try
-            {
-                if (cancellationToken != null)
-                    return await session.Item1.Completion.Task.WaitAsync((CancellationToken)cancellationToken);
-                else
-                    return await session.Item1.Completion.Task;
-            }
-            catch (OperationCanceledException)
-            {
-                _sessions.TryRemove(jobId, out _);
-                throw;
-            }
-        
+            await _jobTrackerManager.WaitForAcknowledge(jobId, cancellationToken);
+        }
+        internal async Task<DeviceJobResult> WaitForCompletion(long jobId, CancellationToken? cancellationToken = null)
+        {
+            return await _jobTrackerManager.WaitForCompletion(jobId, cancellationToken);
         }
         private bool Finish(IReport message, int exitCode)
         {
-            var jobId = message.JobId ?? 0L;
-
-            if (jobId == 0)
+            if (!_jobTrackerManager.TryRemove(message, out var session) || session == null)
                 return false;
-
-            if (!_sessions.TryRemove(jobId, out var session))
-                return false;
-
+            var jobId = message.JobId ?? -1;
             var result = new DeviceJobResult
             {
                 JobId = jobId,
@@ -66,7 +44,22 @@ namespace EasyConnect.Services
                 DurationMs = message.Timestamp ?? 0L
             };
 
-            return session.Item1.Completion.TrySetResult(result);
+            return session.Completion.TrySetResult(result);
+        }
+        private bool Receive(IReport message)
+        {
+            if (!_jobTrackerManager.TryGet(message, out var session) || session == null)
+                return false;
+            var jobId = message.JobId ?? -1;
+            var result = new DeviceJobResult
+            {
+                JobId = jobId,
+                ExitCode = 0,
+                Output = message.Type.ToString(),
+                DurationMs = message.Timestamp ?? 0L
+            };
+
+            return session.Acknowledge.TrySetResult(result);
         }
     }
 }
